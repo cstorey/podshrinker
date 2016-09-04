@@ -119,6 +119,7 @@ def transcode_do(uri):
             with tempfile.NamedTemporaryFile(delete=False, suffix=".opus") as outf:
                 shutil.copyfileobj(blob.raw, inf)
                 cmd = ["ffmpeg",  "-i", inf.name,
+		      "-stats",
                      "-acodec", "libopus", "-b:a", str(32*1024), "-compression_level", "10",
                     "-y", outf.name]
                 print cmd
