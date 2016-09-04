@@ -8,7 +8,7 @@ from time import mktime
 from datetime import datetime
 import requests
 import tempfile
-import os
+import os, sys
 import subprocess
 import urllib
 import hmac, pyblake2, base64
@@ -83,11 +83,15 @@ def feed(uri, verif):
 
 def file_reader(fname):
   with file(fname) as f:
-    while True:
-      data = f.read(4096)
-      if not data:
-	break
-      yield data
+    for chunk in stream(f):
+      yield chunk
+
+def stream(f):
+  while True:
+    data = f.read(4096)
+    if not data:
+      break
+    yield data
 
 
 
@@ -99,8 +103,8 @@ def audio(uri, verif):
   if not hmac.compare_digest(verif, mac):
     abort(403)
 
-  fname = transcode_do(uri)
-  return Response(file_reader(fname), mimetype='audio/ogg; codecs=opus')
+  gen = transcode_do(uri)
+  return Response(gen, mimetype='audio/ogg; codecs=opus')
 
 
 def transcoded_href(uri):
@@ -110,20 +114,31 @@ def transcoded_href(uri):
 def transcode_do(uri):
     storebase = urllib.quote_plus(uri)
     storename = os.path.join(STORE_DIR, "%s.opus" % (storebase,))
+    orig = os.path.join(STORE_DIR, storebase)
     if not os.path.isdir(STORE_DIR):
       os.makedirs(STORE_DIR) 
-    if not os.path.isfile(storename):
+    if not os.path.isfile(orig):
         print "Fetch: " + uri
         blob = requests.get(uri, stream=True)
-        with tempfile.NamedTemporaryFile(delete=False) as inf:
+        with tempfile.NamedTemporaryFile(delete=False) as outf:
+	  shutil.copyfileobj(blob.raw, outf)
+	  os.rename(outf.name, orig)
+    if not os.path.isfile(storename):
             with tempfile.NamedTemporaryFile(delete=False, suffix=".opus") as outf:
-                shutil.copyfileobj(blob.raw, inf)
-                cmd = ["ffmpeg",  "-i", inf.name,
+                cmd = ["ffmpeg",  "-i", orig,
 		      "-stats",
-                     "-acodec", "libopus", "-b:a", str(32*1024), "-compression_level", "10",
-                    "-y", outf.name]
+                     "-acodec", "libopus", "-b:a", str(32*1024), "-compression_level", "10", "-f", "opus",
+                     "-y", "/dev/stdout"]
                 print cmd
-                ret = subprocess.call(cmd)
-                assert ret == 0
+                proc = subprocess.Popen(cmd, stdout=subprocess.PIPE)
+		while True:
+		    data = proc.stdout.read(1024)
+		    if not data:
+		      break
+		    outf.write(data)
+		    yield data
+                assert proc.wait() == 0
                 os.rename(outf.name, storename)
-    return storename
+    else:
+      for chunk in file_reader(storename):
+	yield chunk
