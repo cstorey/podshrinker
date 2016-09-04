@@ -8,4 +8,4 @@ ADD templates /srv/templates
 RUN eatmydata virtualenv /srv/.venv
 RUN eatmydata /srv/.venv/bin/pip install -r /srv/requirements.txt
 WORKDIR /srv
-CMD env FLASK_APP=podshrinker.py .venv/bin/flask run --host=0.0.0.0
+CMD env FLASK_APP=podshrinker.py ./.venv/bin/gunicorn -b 0.0.0.0:5000 -w 4 podshrinker:app
