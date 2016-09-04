@@ -55,7 +55,6 @@ def feed(uri, verif):
   feed.description(parsed.feed.description or '?')
 
   for e in parsed.entries:
-      links = e.links
       entry = feed.add_entry()
       entry.title(e.title)
       entry.id(e.id)
@@ -63,11 +62,11 @@ def feed(uri, verif):
       entry.published(e.published)
       entry.description(e.description)
 
-      for l in links:
+      for l in (e.links if 'link' in e else []):
 	  if l.rel == 'enclosure' and 'href' in l:
 	      storename = transcoded_href(l.href)
 	      entry.enclosure(urlparse.urljoin(request.url, storename), l.get('size', None), l.get('type', None))
-	  elif l.rel == 'alternate':
+	  elif l.rel == 'alternate' and 'href' in l:
 	      entry.link(**l)
 	  else:
 	      print l
