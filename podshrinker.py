@@ -17,7 +17,7 @@ import urlparse
 
 app = Flask(__name__)
 
-HMAC_KEY = 'lkashdf'
+HMAC_KEY = os.environ['MAC_KEY']
 STORE_DIR = '/tmp/pod-opus-store/'
 
 
