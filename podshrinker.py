@@ -54,7 +54,7 @@ def feed(uri, verif):
   feed.link(href=parsed.feed.link)
   feed.description(parsed.feed.description or '?')
 
-  for e in parsed.entries[:5]:
+  for e in parsed.entries:
       links = e.links
       entry = feed.add_entry()
       entry.title(e.title)
