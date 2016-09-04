@@ -60,6 +60,7 @@ def feed(uri, verif):
       entry.title(e.title)
       entry.id(e.id)
       entry.updated(e.updated)
+      entry.published(e.published)
       entry.description(e.description)
 
       for l in links:
