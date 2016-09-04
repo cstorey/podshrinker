@@ -1,5 +1,5 @@
 FROM ubuntu:16.04
-RUN apt-get update && apt-get -y install python-virtualenv build-essential python-dev libxml2-dev libxslt1-dev
+RUN apt-get update && apt-get -y install python-virtualenv gcc python-dev libxml2-dev libxslt1-dev ffmpeg
 
 ADD requirements.txt podshrinker.py /srv/
 ADD templates /srv/templates
