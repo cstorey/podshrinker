@@ -60,9 +60,9 @@ def feed(uri, verif):
       entry.title(e.title)
       entry.id(e.id)
       entry.updated(e.updated)
+      entry.description(e.description)
 
       for l in links:
-	  print l
 	  if l.rel == 'enclosure' and 'href' in l:
 	      storename = transcoded_href(l.href)
 	      entry.enclosure(urlparse.urljoin(request.url, storename), l.get('size', None), l.get('type', None))
@@ -71,7 +71,7 @@ def feed(uri, verif):
 	  else:
 	      print l
       
-      for c in e.content:
+      for c in (e.content if 'content' in e else []):
 	  if c.type.startswith('text/html'):
 	      entry.content(content=c.value, type='html')
 	  elif c.type.startswith('text/plain'):
