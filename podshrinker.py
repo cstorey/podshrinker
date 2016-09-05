@@ -14,8 +14,19 @@ import urllib
 import hmac, pyblake2, base64
 import shutil
 import urlparse
+import logging
 
+OPUS_TYPE = 'audio/ogg; codecs=opus'
+
+log = logging.getLogger(__name__)
 app = Flask(__name__)
+
+@app.before_first_request
+def setup_logging():
+    if not app.debug:
+        # In production mode, add log handler to sys.stderr.
+        app.logger.addHandler(logging.StreamHandler())
+        app.logger.setLevel(logging.DEBUG)
 
 HMAC_KEY = os.environ['MAC_KEY']
 STORE_DIR = '/tmp/pod-opus-store/'
@@ -46,7 +57,9 @@ def feed(uri, verif):
   if not hmac.compare_digest(verif, mac):
     abort(403)
 
+  app.logger.debug("Parse feed: %r", uri)
   parsed = feedparser.parse(uri)
+  app.logger.debug("Parsed feed: %r", uri)
 
   feed = FeedGenerator()
   feed.id(uri)
@@ -65,16 +78,15 @@ def feed(uri, verif):
       for l in (e.links if 'link' in e else []):
 	  if l.rel == 'enclosure' and 'href' in l:
 	      storename = transcoded_href(l.href)
-	      entry.enclosure(urlparse.urljoin(request.url, storename), l.get('size', None), l.get('type', None))
+	      entry.enclosure(urlparse.urljoin(request.url, storename), l.get('size', None),
+		  l.get('type', OPUS_TYPE))
 	  elif l.rel == 'alternate' and 'href' in l:
 	      entry.link(**l)
-	  else:
-	      print l
       
       for c in (e.content if 'content' in e else []):
-	  if c.type.startswith('text/html'):
+	  if 'type' in c and c.type.startswith('text/html'):
 	      entry.content(content=c.value, type='html')
-	  elif c.type.startswith('text/plain'):
+	  else:
 	      entry.content(content=c.value, type='text')
 
   resp = make_response(feed.rss_str(pretty=True))
@@ -104,7 +116,7 @@ def audio(uri, verif):
     abort(403)
 
   gen = transcode_do(uri)
-  return Response(gen, mimetype='audio/ogg; codecs=opus')
+  return Response(gen, mimetype=OPUS_TYPE)
 
 
 def transcoded_href(uri):
@@ -118,7 +130,7 @@ def transcode_do(uri):
     if not os.path.isdir(STORE_DIR):
       os.makedirs(STORE_DIR) 
     if not os.path.isfile(orig):
-        print "Fetch: " + uri
+        log.debug("Fetch: " + uri)
         blob = requests.get(uri, stream=True)
         with tempfile.NamedTemporaryFile(delete=False) as outf:
 	  shutil.copyfileobj(blob.raw, outf)
@@ -129,7 +141,7 @@ def transcode_do(uri):
 		      "-stats",
                      "-acodec", "libopus", "-b:a", str(32*1024), "-compression_level", "10", "-f", "opus",
                      "-y", "/dev/stdout"]
-                print cmd
+                app.logger.debug("Running:%r", cmd)
                 proc = subprocess.Popen(cmd, stdout=subprocess.PIPE)
 		while True:
 		    data = proc.stdout.read(1024)
