@@ -63,27 +63,30 @@ def feed(uri, verif):
     abort(403)
 
   cachefile = os.path.join(STORE_DIR, urllib.quote_plus(uri)) + ".pickle"
-  etag = None
+  modified = etag = None
   cached = None
   if os.path.isfile(cachefile):
     try:
       with file(cachefile) as f:
 	cached = pickle.load(f)
 	app.logger.debug("Loaded cache from cachefile:%r", cachefile)
-	etag = cached.etag
+	etag = cached.etag if 'etag' in cached else None
+	modified = cached.modified if 'modified' in cached else None
     except Exception, e:
       app.logger.warn("Could not load cache:%r", e)
 
-  app.logger.debug("Parse feed: %r; etag:%r", uri, etag)
-  parsed = feedparser.parse(uri, etag=etag)
+  app.logger.debug("Parse feed: %r; etag:%r; modified:%r", uri, etag, modified)
+  parsed = feedparser.parse(uri, etag=etag, modified=modified)
   app.logger.debug("Parsed feed: %r; %r", uri, parsed.status)
   if parsed.status == 304:
     parsed = cached
-  with tempfile.NamedTemporaryFile(delete=False) as f:
-    pickle.dump(parsed, f)
-    f.flush()
-    os.rename(f.name, cachefile)
-    app.logger.debug("Saved cache to cachefile:%r", cachefile)
+
+  if 'etag' in parsed or 'modified' in parsed:
+    with tempfile.NamedTemporaryFile(delete=False) as f:
+      pickle.dump(parsed, f)
+      f.flush()
+      os.rename(f.name, cachefile)
+      app.logger.debug("Saved cache to cachefile:%r", cachefile)
 
   feed = FeedGenerator()
   feed.id(uri)
