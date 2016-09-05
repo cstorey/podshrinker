@@ -78,7 +78,7 @@ def feed(uri, verif):
   app.logger.debug("Parse feed: %r; etag:%r; modified:%r", uri, etag, modified)
   parsed = feedparser.parse(uri, etag=etag, modified=modified)
   app.logger.debug("Parsed feed: %r; %r", uri, parsed.status)
-  if parsed.entries:
+  if not parsed.entries:
     parsed = cached
 
   if 'etag' in parsed or 'modified' in parsed:
