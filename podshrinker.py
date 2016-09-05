@@ -72,7 +72,7 @@ def feed(uri, verif):
 	app.logger.debug("Loaded cache from cachefile:%r", cachefile)
 	etag = cached.etag
     except Exception, e:
-      app.logger.warn("Could not load cache", e)
+      app.logger.warn("Could not load cache:%r", e)
 
   app.logger.debug("Parse feed: %r; etag:%r", uri, etag)
   parsed = feedparser.parse(uri, etag=etag)
