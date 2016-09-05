@@ -15,6 +15,7 @@ import hmac, pyblake2, base64
 import shutil
 import urlparse
 import logging
+import pickle
 
 OPUS_TYPE = 'audio/ogg; codecs=opus'
 
@@ -31,6 +32,10 @@ def setup_logging():
 HMAC_KEY = os.environ['MAC_KEY']
 STORE_DIR = '/tmp/pod-opus-store/'
 
+@app.before_first_request
+def setup_store():
+  if not os.path.isdir(STORE_DIR):
+    os.makedirs(STORE_DIR)
 
 @app.route('/')
 def index():
@@ -42,7 +47,7 @@ def index():
       mac = hmac.new(HMAC_KEY, uri.encode('utf8'), digestmod=pyblake2.blake2s).digest()
       encoded = urljoin(request.url, url_for('feed', uri=base64.urlsafe_b64encode(uri),
 	  verif=base64.urlsafe_b64encode(mac)))
-      
+
     print encoded
     return render_template("root.html",
 	encode_rss_action=url_for('index'),
@@ -57,9 +62,28 @@ def feed(uri, verif):
   if not hmac.compare_digest(verif, mac):
     abort(403)
 
-  app.logger.debug("Parse feed: %r", uri)
-  parsed = feedparser.parse(uri)
-  app.logger.debug("Parsed feed: %r", uri)
+  cachefile = os.path.join(STORE_DIR, urllib.quote_plus(uri)) + ".pickle"
+  etag = None
+  cached = None
+  if os.path.isfile(cachefile):
+    try:
+      with file(cachefile) as f:
+	cached = pickle.load(f)
+	app.logger.debug("Loaded cache from cachefile:%r", cachefile)
+	etag = cached.etag
+    except Exception, e:
+      app.logger.warn("Could not load cache", e)
+
+  app.logger.debug("Parse feed: %r; etag:%r", uri, etag)
+  parsed = feedparser.parse(uri, etag=etag)
+  app.logger.debug("Parsed feed: %r; %r", uri, parsed.status)
+  if parsed.status == 304:
+    parsed = cached
+  with tempfile.NamedTemporaryFile(delete=False) as f:
+    pickle.dump(parsed, f)
+    f.flush()
+    os.rename(f.name, cachefile)
+    app.logger.debug("Saved cache to cachefile:%r", cachefile)
 
   feed = FeedGenerator()
   feed.id(uri)
@@ -84,7 +108,7 @@ def feed(uri, verif):
 		  l.get('type', OPUS_TYPE))
 	  elif l.rel == 'alternate' and 'href' in l:
 	      entry.link(**l)
-      
+
       for c in (e.content if 'content' in e else []):
 	  if 'type' in c and c.type.startswith('text/html'):
 	      entry.content(content=c.value, type='html')
@@ -93,7 +117,7 @@ def feed(uri, verif):
 
   resp = make_response(feed.rss_str(pretty=True))
   resp.headers['content-type'] = 'application/xml'
-  return resp 
+  return resp
 
 def file_reader(fname):
   with file(fname) as f:
@@ -129,8 +153,7 @@ def transcode_do(uri):
     storebase = urllib.quote_plus(uri)
     storename = os.path.join(STORE_DIR, "%s.opus" % (storebase,))
     orig = os.path.join(STORE_DIR, storebase)
-    if not os.path.isdir(STORE_DIR):
-      os.makedirs(STORE_DIR) 
+
     if not os.path.isfile(orig):
         log.debug("Fetch: " + uri)
         blob = requests.get(uri, stream=True)
