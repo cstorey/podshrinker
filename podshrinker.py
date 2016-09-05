@@ -66,6 +66,8 @@ def feed(uri, verif):
   feed.title(parsed.feed.title)
   feed.link(href=parsed.feed.link)
   feed.description(parsed.feed.description or '?')
+  if 'image' in parsed.feed and 'href' in parsed.feed.image:
+    feed.image(parsed.feed.image.href)
 
   for e in parsed.entries:
       entry = feed.add_entry()
