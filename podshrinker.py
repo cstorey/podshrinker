@@ -6,6 +6,7 @@ import feedparser
 from feedgen.feed import FeedGenerator
 from time import mktime
 from datetime import datetime
+import pytz
 import requests
 import tempfile
 import os, sys
@@ -100,8 +101,8 @@ def feed(uri, verif):
       entry = feed.add_entry()
       entry.title(e.title)
       entry.id(e.id)
-      entry.updated(e.updated)
-      entry.published(e.published)
+      entry.updated(datetime.fromtimestamp(mktime(e.updated_parsed), pytz.UTC))
+      entry.published(datetime.fromtimestamp(mktime(e.published_parsed), pytz.UTC))
       entry.description(e.description)
 
       for l in (e.links if 'link' in e else []):
