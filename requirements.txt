@@ -3,7 +3,6 @@ dateutils==0.6.6
 feedgen==0.3.2
 feedparser==5.2.1
 Flask==0.11.1
-gunicorn==19.6.0
 itsdangerous==0.24
 Jinja2==2.8
 lxml==3.6.4
