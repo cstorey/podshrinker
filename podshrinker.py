@@ -98,15 +98,14 @@ def feed(uri, verif):
     feed.image(parsed.feed.image.href)
 
   for e in parsed.entries:
+    try:
       entry = feed.add_entry()
-      entry.title(e.title)
-      entry.id(e.id)
-      entry.updated(datetime.fromtimestamp(mktime(e.updated_parsed), pytz.UTC))
-      entry.published(datetime.fromtimestamp(mktime(e.published_parsed), pytz.UTC))
-      entry.description(e.description)
+      id = e.id if 'id' in e else None
 
-      for l in (e.links if 'link' in e else []):
+      for l in (e.links if 'links' in e else []):
 	  if l.rel == 'enclosure' and 'href' in l:
+	      if not id:
+		id = l.href
 	      storename = transcoded_href(l.href)
 	      entry.enclosure(urlparse.urljoin(request.url, storename), l.get('size', None),
 		  l.get('type', OPUS_TYPE))
@@ -118,6 +117,19 @@ def feed(uri, verif):
 	      entry.content(content=c.value, type='html')
 	  else:
 	      entry.content(content=c.value, type='text')
+
+      entry.title(e.title)
+      entry.id(id)
+      if 'updated' in e:
+	  entry.updated(datetime.fromtimestamp(mktime(e.updated_parsed), pytz.UTC))
+      if 'published' in e:
+	  entry.published(datetime.fromtimestamp(mktime(e.published_parsed), pytz.UTC))
+      if 'description' in e:
+          entry.description(e.description)
+    except Exception, x:
+      print "Error handling:%r; %r" % (e.keys(), e,)
+      raise x
+
 
   resp = make_response(feed.rss_str(pretty=True))
   resp.headers['content-type'] = 'application/xml'
