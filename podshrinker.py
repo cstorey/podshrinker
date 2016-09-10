@@ -166,7 +166,8 @@ def transcoded_href(uri):
     return url_for('audio', uri=base64.urlsafe_b64encode(uri), verif=base64.urlsafe_b64encode(verif))
 
 def transcode_do(uri):
-    storebase = urllib.quote_plus(uri)
+    storebase = base64.urlsafe_b64encode(pyblake2.blake2s(uri.encode('utf8')).digest())
+    #storebase = urllib.quote_plus(uri)
     storename = os.path.join(STORE_DIR, "%s.opus" % (storebase,))
     orig = os.path.join(STORE_DIR, storebase)
 
