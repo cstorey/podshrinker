@@ -78,8 +78,8 @@ def feed(uri, verif):
 
   app.logger.debug("Parse feed: %r; etag:%r; modified:%r", uri, etag, modified)
   parsed = feedparser.parse(uri, etag=etag, modified=modified)
-  app.logger.debug("Parsed feed: %r; %r", uri, parsed.status)
-  if not parsed.entries:
+  app.logger.debug("Parsed feed: %r; %r", uri, 'status' in parsed and parsed.status)
+  if cached and not parsed.entries:
     parsed = cached
 
   if 'etag' in parsed or 'modified' in parsed:
@@ -172,24 +172,37 @@ def transcode_do(uri):
     orig = os.path.join(STORE_DIR, storebase)
 
     if not os.path.isfile(orig):
-        log.debug("Fetch: " + uri)
-        blob = requests.get(uri, stream=True)
-        with tempfile.NamedTemporaryFile(delete=False) as outf:
-	  shutil.copyfileobj(blob.raw, outf)
-	  os.rename(outf.name, orig)
+      log.debug("Fetch: " + uri)
+      blob = requests.get(uri, stream=True)
+      with tempfile.NamedTemporaryFile(delete=False) as outf:
+	shutil.copyfileobj(blob.raw, outf)
+	os.rename(outf.name, orig)
     if not os.path.isfile(storename):
-            with tempfile.NamedTemporaryFile(delete=False, suffix=".opus") as outf:
-                cmd = transcode_command(orig)
-                app.logger.debug("Running:%r", cmd)
-                proc = subprocess.Popen(cmd, stdout=subprocess.PIPE)
-		while True:
-		    data = proc.stdout.read(1024)
-		    if not data:
-		      break
-		    outf.write(data)
-		    yield data
-                assert proc.wait() == 0
-                os.rename(outf.name, storename)
+      with tempfile.NamedTemporaryFile(delete=False, suffix=".opus") as outf:
+	cmd = transcode_command(orig)
+	app.logger.debug("Running:%r", cmd)
+	proc = subprocess.Popen(cmd, stdout=subprocess.PIPE)
+	try:
+	    while True:
+		data = proc.stdout.read(1024)
+		if not data:
+		  break
+		outf.write(data)
+		yield data
+	    assert proc.wait() == 0
+	    os.rename(outf.name, storename)
+	finally:
+	  app.logger.debug("Finishing... %r", proc.poll())
+	  proc.stdout.close()
+	  if proc.poll() is None:
+	    app.logger.debug("TERM %r", proc.pid)
+	    proc.terminate()
+	  if proc.poll() is None:
+	    app.logger.debug("KILL %r", proc.pid)
+	    proc.kill()
+	    proc.wait()
+	  if proc.poll() is None:
+	    app.logger.debug("Leaking child %r", proc.pid)
     else:
       for chunk in file_reader(storename):
 	yield chunk
