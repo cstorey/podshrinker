@@ -195,10 +195,7 @@ def transcode_do(uri):
 	yield chunk
 
 def transcode_command(orig, bitrate=32):
-  return ["ffmpeg",  "-i", orig,
-    "-stats",
-    "-acodec", "libopus", "-b:a", str(bitrate*1024), "-compression_level", "10", "-f", "opus",
-    "-y", "/dev/stdout"]
+  return ["cvlc", "--quiet", "--no-repeat", "--no-loop", "-Idummy", orig, "--sout", "#transcode{vcodec=none,acodec=opus,ab=%d,channels=2}:file{mux=ogg,dst=/dev/stdout}" % (bitrate,), "vlc://quit"]
 
 if __name__ == '__main__':
   from waitress import serve
