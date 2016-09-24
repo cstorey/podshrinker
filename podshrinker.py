@@ -25,10 +25,11 @@ app = Flask(__name__)
 
 @app.before_first_request
 def setup_logging():
-    if not app.debug:
-        # In production mode, add log handler to sys.stderr.
+    print repr((app.logger.handlers, app.logger.level))
+    if not app.logger.handlers:
         app.logger.addHandler(logging.StreamHandler())
-        app.logger.setLevel(logging.DEBUG)
+    app.logger.setLevel(logging.DEBUG)
+    print repr((app.logger.handlers, app.logger.level))
 
 HMAC_KEY = os.environ['MAC_KEY']
 STORE_DIR = '/tmp/pod-opus-store/'
