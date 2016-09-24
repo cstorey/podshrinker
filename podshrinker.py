@@ -179,10 +179,7 @@ def transcode_do(uri):
 	  os.rename(outf.name, orig)
     if not os.path.isfile(storename):
             with tempfile.NamedTemporaryFile(delete=False, suffix=".opus") as outf:
-                cmd = ["ffmpeg",  "-i", orig,
-		      "-stats",
-                     "-acodec", "libopus", "-b:a", str(32*1024), "-compression_level", "10", "-f", "opus",
-                     "-y", "/dev/stdout"]
+                cmd = transcode_command(orig)
                 app.logger.debug("Running:%r", cmd)
                 proc = subprocess.Popen(cmd, stdout=subprocess.PIPE)
 		while True:
@@ -196,6 +193,12 @@ def transcode_do(uri):
     else:
       for chunk in file_reader(storename):
 	yield chunk
+
+def transcode_command(orig, bitrate=32):
+  return ["ffmpeg",  "-i", orig,
+    "-stats",
+    "-acodec", "libopus", "-b:a", str(bitrate*1024), "-compression_level", "10", "-f", "opus",
+    "-y", "/dev/stdout"]
 
 if __name__ == '__main__':
   from waitress import serve
