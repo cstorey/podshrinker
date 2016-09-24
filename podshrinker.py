@@ -23,13 +23,6 @@ OPUS_TYPE = 'audio/ogg; codecs=opus'
 log = logging.getLogger(__name__)
 app = Flask(__name__)
 
-@app.before_first_request
-def setup_logging():
-    if not app.debug:
-        # In production mode, add log handler to sys.stderr.
-        app.logger.addHandler(logging.StreamHandler())
-        app.logger.setLevel(logging.DEBUG)
-
 HMAC_KEY = os.environ['MAC_KEY']
 STORE_DIR = '/tmp/pod-opus-store/'
 
