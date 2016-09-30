@@ -89,9 +89,6 @@ def feed(uri, verif):
   parsed = feedparser.parse(uri, etag=etag, modified=modified)
   app.logger.debug("Parsed feed: %r; %r", uri, 'status' in parsed and parsed.status)
 
-  if 'bozo_exception' in parsed:
-    raise parsed.bozo_exception
-
   if cached and not parsed.entries:
     parsed = cached
 
