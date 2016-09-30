@@ -181,9 +181,8 @@ def pathfor(uri, suff):
     maxlen = min(os.pathconf(STORE_DIR, 'PC_PATH_MAX') - len(STORE_DIR.encode('utf8')),
 	os.pathconf(STORE_DIR, 'PC_NAME_MAX'))
 
-    storebase = "%s-%s" % (
-	base64.urlsafe_b64encode(pyblake2.blake2s(uri.encode('utf8')).digest()),
-	urllib.quote_plus(uri))
+    storebase = "%s;%s" % (urllib.quote_plus(uri),
+	base64.urlsafe_b64encode(pyblake2.blake2s(uri.encode('utf8')).digest()))
 
     storebase = storebase[:maxlen-len(suff.encode('utf8'))]
     return os.path.join(STORE_DIR, "%s%s" % (storebase, suff))
