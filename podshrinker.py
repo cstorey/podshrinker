@@ -38,6 +38,12 @@ def setup_store():
   if not os.path.isdir(STORE_DIR):
     os.makedirs(STORE_DIR)
 
+def verify_uri(uri):
+  p = urlparse.urlparse(uri)
+  if p.scheme not in ('http', 'https'):
+    app.logger.warn("Bad scheme (%r) passed in uri: %s", p.scheme, uri)
+    abort(404)
+
 @app.route('/')
 def index():
     try:
@@ -45,6 +51,7 @@ def index():
     except KeyError:
       encoded = None
     else:
+      verify_uri(uri)
       mac = hmac.new(HMAC_KEY, uri.encode('utf8'), digestmod=pyblake2.blake2s).digest()
       encoded = urljoin(request.url, url_for('feed', uri=base64.urlsafe_b64encode(uri),
 	  verif=base64.urlsafe_b64encode(mac)))
@@ -63,7 +70,9 @@ def feed(uri, verif):
   if not hmac.compare_digest(verif, mac):
     abort(403)
 
-  cachefile = os.path.join(STORE_DIR, urllib.quote_plus(uri)) + ".pickle"
+  verify_uri(uri)
+
+  cachefile = pathfor(uri, '.pickle')
   modified = etag = None
   cached = None
   if os.path.isfile(cachefile):
@@ -79,6 +88,10 @@ def feed(uri, verif):
   app.logger.debug("Parse feed: %r; etag:%r; modified:%r", uri, etag, modified)
   parsed = feedparser.parse(uri, etag=etag, modified=modified)
   app.logger.debug("Parsed feed: %r; %r", uri, 'status' in parsed and parsed.status)
+
+  if 'bozo_exception' in parsed:
+    raise parsed.bozo_exception
+
   if cached and not parsed.entries:
     parsed = cached
 
@@ -91,9 +104,9 @@ def feed(uri, verif):
 
   feed = FeedGenerator()
   feed.id(uri)
-  feed.title(parsed.feed.title)
-  feed.link(href=parsed.feed.link)
-  feed.description(parsed.feed.description or '?')
+  feed.title(parsed.feed.get('title', '???'))
+  feed.link(href=parsed.feed.get('link', 'about:blank'))
+  feed.description(parsed.feed.get('description', '???'))
   if 'image' in parsed.feed and 'href' in parsed.feed.image:
     feed.image(parsed.feed.image.href)
 
@@ -157,6 +170,8 @@ def audio(uri, verif):
   if not hmac.compare_digest(verif, mac):
     abort(403)
 
+  verify_uri(uri)
+
   gen = transcode_do(uri)
   return Response(gen, mimetype=OPUS_TYPE)
 
@@ -165,18 +180,31 @@ def transcoded_href(uri):
     verif = hmac.new(HMAC_KEY, uri.encode('utf8'), digestmod=pyblake2.blake2s).digest()
     return url_for('audio', uri=base64.urlsafe_b64encode(uri), verif=base64.urlsafe_b64encode(verif))
 
+def pathfor(uri, suff):
+    maxlen = min(os.pathconf(STORE_DIR, 'PC_PATH_MAX') - len(STORE_DIR.encode('utf8')),
+	os.pathconf(STORE_DIR, 'PC_NAME_MAX'))
+
+    storebase = "%s-%s" % (
+	base64.urlsafe_b64encode(pyblake2.blake2s(uri.encode('utf8')).digest()),
+	urllib.quote_plus(uri))
+
+    storebase = storebase[:maxlen-len(suff.encode('utf8'))]
+    return os.path.join(STORE_DIR, "%s%s" % (storebase, suff))
+
 def transcode_do(uri):
-    storebase = base64.urlsafe_b64encode(pyblake2.blake2s(uri.encode('utf8')).digest())
-    #storebase = urllib.quote_plus(uri)
-    storename = os.path.join(STORE_DIR, "%s.opus" % (storebase,))
-    orig = os.path.join(STORE_DIR, storebase)
+
+    storename = pathfor(uri, '.opus')
+    orig = pathfor(uri, '.orig')
 
     if not os.path.isfile(orig):
       log.debug("Fetch: " + uri)
       blob = requests.get(uri, stream=True)
+
       with tempfile.NamedTemporaryFile(delete=False) as outf:
 	shutil.copyfileobj(blob.raw, outf)
 	os.rename(outf.name, orig)
+	app.logger.debug("Saved original to %r", orig)
+
     if not os.path.isfile(storename):
       with tempfile.NamedTemporaryFile(delete=False, suffix=".opus") as outf:
 	cmd = transcode_command(orig)
@@ -191,6 +219,7 @@ def transcode_do(uri):
 		yield data
 	    assert proc.wait() == 0
 	    os.rename(outf.name, storename)
+	    app.logger.debug("Saved transcoded to %r", orig)
 	finally:
 	  app.logger.debug("Finishing... %r", proc.poll())
 	  proc.stdout.close()
@@ -203,6 +232,9 @@ def transcode_do(uri):
 	    proc.wait()
 	  if proc.poll() is None:
 	    app.logger.debug("Leaking child %r", proc.pid)
+
+	  if os.path.isfile(outf.name):
+	    os.unlink(outf.name)
     else:
       for chunk in file_reader(storename):
 	yield chunk
