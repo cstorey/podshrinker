@@ -6,4 +6,9 @@ services:
     ports:
       - "5000:5000"
     env_file: env.txt
+    environment:
+      - FEED_DIR=/var/lib/feed-store
+      - MEDIA_DIR=/var/lib/media-store
     restart: always
+    volumes:
+      - /tmp/feed-store:/var/lib/feed-store
