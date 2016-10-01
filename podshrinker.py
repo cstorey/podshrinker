@@ -104,9 +104,9 @@ def feed(uri, verif):
 
   feed = FeedGenerator()
   feed.id(uri)
-  feed.title(parsed.feed.get('title', '???'))
-  feed.link(href=parsed.feed.get('link', 'about:blank'))
-  feed.description(parsed.feed.get('description', '???'))
+  feed.title(parsed.feed.get('title', None) or '???')
+  feed.link(href=parsed.feed.get('link', None) or 'about:blank')
+  feed.description(parsed.feed.get('description', None) or '???')
   if 'image' in parsed.feed and 'href' in parsed.feed.image:
     feed.image(parsed.feed.image.href)
 
@@ -131,22 +131,24 @@ def feed(uri, verif):
 	  else:
 	      entry.content(content=c.value, type='text')
 
-      entry.title(e.title)
       entry.id(id)
+      entry.title(e.get('title', None) or '???')
+      entry.description(e.get('description', None) or '???')
       if 'updated' in e:
 	  entry.updated(datetime.fromtimestamp(mktime(e.updated_parsed), pytz.UTC))
       if 'published' in e:
 	  entry.published(datetime.fromtimestamp(mktime(e.published_parsed), pytz.UTC))
-      if 'description' in e:
-          entry.description(e.description)
     except Exception, x:
       print "Error handling:%r; %r" % (e.keys(), e,)
       raise x
 
-
-  resp = make_response(feed.rss_str(pretty=True))
-  resp.headers['content-type'] = 'application/xml'
-  return resp
+  try:
+    resp = make_response(feed.rss_str(pretty=True))
+    resp.headers['content-type'] = 'application/xml'
+    return resp
+  except BaseException, e:
+    app.logger.debug("Rendering:\n%s", yaml.dump(feed))
+    raise e
 
 def file_reader(fname):
   with file(fname) as f:
