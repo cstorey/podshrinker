@@ -31,12 +31,15 @@ def setup_logging():
         app.logger.setLevel(logging.DEBUG)
 
 HMAC_KEY = os.environ['MAC_KEY']
-STORE_DIR = '/tmp/pod-opus-store/'
+FEED_DIR = os.environ.get('FEED_DIR', '/tmp/pod-feed-store/')
+MEDIA_DIR = os.environ.get('MEDIA_DIR', '/tmp/pod-opus-store/')
+
 
 @app.before_first_request
 def setup_store():
-  if not os.path.isdir(STORE_DIR):
-    os.makedirs(STORE_DIR)
+  for d in (FEED_DIR, MEDIA_DIR):
+    if not os.path.isdir(d):
+      os.makedirs(d)
 
 def verify_uri(uri):
   p = urlparse.urlparse(uri)
@@ -72,7 +75,7 @@ def feed(uri, verif):
 
   verify_uri(uri)
 
-  cachefile = pathfor(uri, '.pickle')
+  cachefile = pathfor(uri, '.pickle', FEED_DIR)
   modified = etag = None
   cached = None
   if os.path.isfile(cachefile):
@@ -93,7 +96,7 @@ def feed(uri, verif):
     parsed = cached
 
   if 'etag' in parsed or 'modified' in parsed:
-    with tempfile.NamedTemporaryFile(delete=False) as f:
+    with tempfile.NamedTemporaryFile(delete=False, dir=FEED_DIR) as f:
       pickle.dump(parsed, f)
       f.flush()
       os.rename(f.name, cachefile)
@@ -177,32 +180,31 @@ def transcoded_href(uri):
     verif = hmac.new(HMAC_KEY, uri.encode('utf8'), digestmod=pyblake2.blake2s).digest()
     return url_for('audio', uri=base64.urlsafe_b64encode(uri), verif=base64.urlsafe_b64encode(verif))
 
-def pathfor(uri, suff):
-    maxlen = min(os.pathconf(STORE_DIR, 'PC_PATH_MAX') - len(STORE_DIR.encode('utf8')),
-	os.pathconf(STORE_DIR, 'PC_NAME_MAX'))
+def pathfor(uri, suff, dir):
+    maxlen = min(os.pathconf(dir, 'PC_PATH_MAX') - len(dir.encode('utf8')),
+	os.pathconf(dir, 'PC_NAME_MAX'))
 
     storebase = "%s;%s" % (urllib.quote_plus(uri),
 	base64.urlsafe_b64encode(pyblake2.blake2s(uri.encode('utf8')).digest()))
 
     storebase = storebase[:maxlen-len(suff.encode('utf8'))]
-    return os.path.join(STORE_DIR, "%s%s" % (storebase, suff))
+    return os.path.join(dir, "%s%s" % (storebase, suff))
 
 def transcode_do(uri):
-
-    storename = pathfor(uri, '.opus')
-    orig = pathfor(uri, '.orig')
+    storename = pathfor(uri, '.opus', MEDIA_DIR)
+    orig = pathfor(uri, '.orig', MEDIA_DIR)
 
     if not os.path.isfile(orig):
       log.debug("Fetch: " + uri)
       blob = requests.get(uri, stream=True)
 
-      with tempfile.NamedTemporaryFile(delete=False) as outf:
+      with tempfile.NamedTemporaryFile(delete=False, dir=MEDIA_DIR) as outf:
 	shutil.copyfileobj(blob.raw, outf)
 	os.rename(outf.name, orig)
 	app.logger.debug("Saved original to %r", orig)
 
     if not os.path.isfile(storename):
-      with tempfile.NamedTemporaryFile(delete=False, suffix=".opus") as outf:
+      with tempfile.NamedTemporaryFile(delete=False, suffix=".opus", dir=MEDIA_DIR) as outf:
 	cmd = transcode_command(orig)
 	app.logger.debug("Running:%r", cmd)
 	proc = subprocess.Popen(cmd, stdout=subprocess.PIPE)
