@@ -16,7 +16,7 @@ import hmac, pyblake2, base64
 import shutil
 import urlparse
 import logging
-import pickle
+import yaml
 
 OPUS_TYPE = 'audio/ogg; codecs=opus'
 
@@ -75,13 +75,13 @@ def feed(uri, verif):
 
   verify_uri(uri)
 
-  cachefile = pathfor(uri, '.pickle', FEED_DIR)
+  cachefile = pathfor(uri, '.yaml', FEED_DIR)
   modified = etag = None
   cached = None
   if os.path.isfile(cachefile):
     try:
       with file(cachefile) as f:
-	cached = pickle.load(f)
+	cached = yaml.load(f)
 	app.logger.debug("Loaded cache from cachefile:%r", cachefile)
 	etag = cached.etag if 'etag' in cached else None
 	modified = cached.modified if 'modified' in cached else None
@@ -95,12 +95,11 @@ def feed(uri, verif):
   if cached and not parsed.entries:
     parsed = cached
 
-  if 'etag' in parsed or 'modified' in parsed:
-    with tempfile.NamedTemporaryFile(delete=False, dir=FEED_DIR) as f:
-      pickle.dump(parsed, f)
-      f.flush()
-      os.rename(f.name, cachefile)
-      app.logger.debug("Saved cache to cachefile:%r", cachefile)
+  with tempfile.NamedTemporaryFile(delete=False, dir=FEED_DIR) as f:
+    yaml.dump(parsed, f)
+    f.flush()
+    os.rename(f.name, cachefile)
+    app.logger.debug("Saved cache to cachefile:%r", cachefile)
 
   feed = FeedGenerator()
   feed.id(uri)
