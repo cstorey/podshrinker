@@ -99,6 +99,7 @@ def feed(uri, verif):
     yaml.dump(parsed, f)
     f.flush()
     os.rename(f.name, cachefile)
+    os.chmod(cachefile, 0644)
     app.logger.debug("Saved cache to cachefile:%r", cachefile)
 
   feed = FeedGenerator()
@@ -200,6 +201,7 @@ def transcode_do(uri):
       with tempfile.NamedTemporaryFile(delete=False, dir=MEDIA_DIR) as outf:
 	shutil.copyfileobj(blob.raw, outf)
 	os.rename(outf.name, orig)
+	os.chmod(orig, 0644)
 	app.logger.debug("Saved original to %r", orig)
 
     if not os.path.isfile(storename):
@@ -216,6 +218,7 @@ def transcode_do(uri):
 		yield data
 	    assert proc.wait() == 0
 	    os.rename(outf.name, storename)
+	    os.chmod(storename, 0644)
 	    app.logger.debug("Saved transcoded to %r", orig)
 	finally:
 	  app.logger.debug("Finishing... %r", proc.poll())
