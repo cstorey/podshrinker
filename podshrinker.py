@@ -17,11 +17,15 @@ import shutil
 import urlparse
 import logging
 import yaml
+from concurrent import futures
 
 OPUS_TYPE = 'audio/ogg; codecs=opus'
 
 log = logging.getLogger(__name__)
 app = Flask(__name__)
+
+
+pool = futures.ThreadPoolExecutor(max_workers=4)
 
 @app.before_first_request
 def setup_logging():
@@ -59,7 +63,6 @@ def index():
       encoded = urljoin(request.url, url_for('feed', uri=base64.urlsafe_b64encode(uri),
 	  verif=base64.urlsafe_b64encode(mac)))
 
-    print encoded
     return render_template("root.html",
 	encode_rss_action=url_for('index'),
 	encoded=encoded
@@ -95,12 +98,15 @@ def feed(uri, verif):
   if cached and not parsed.entries:
     parsed = cached
 
-  with tempfile.NamedTemporaryFile(delete=False, dir=FEED_DIR) as f:
-    yaml.dump(parsed, f)
-    f.flush()
-    os.rename(f.name, cachefile)
-    os.chmod(cachefile, 0644)
-    app.logger.debug("Saved cache to cachefile:%r", cachefile)
+  def save_to_cache():
+    with tempfile.NamedTemporaryFile(delete=False, dir=FEED_DIR) as f:
+      yaml.dump(parsed, f)
+      f.flush()
+      os.rename(f.name, cachefile)
+      os.chmod(cachefile, 0644)
+      app.logger.debug("Saved cache to cachefile:%r", cachefile)
+
+  pool.submit(save_to_cache)
 
   feed = FeedGenerator()
   feed.id(uri)
