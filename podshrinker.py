@@ -140,13 +140,12 @@ def feed(uri, verif):
       entry.id(id)
       entry.title(e.get('title', None) or '???')
       entry.description(e.get('description', None) or '???')
-      if 'updated' in e:
+      if 'updated_parsed' in e and e.updated_parsed:
 	  entry.updated(datetime.fromtimestamp(mktime(e.updated_parsed), pytz.UTC))
-      if 'published' in e:
+      if 'published_parsed' in e and e.published_parsed:
 	  entry.published(datetime.fromtimestamp(mktime(e.published_parsed), pytz.UTC))
-    except Exception, x:
-      print "Error handling:%r; %r" % (e.keys(), e,)
-      raise x
+    finally:
+      pass
 
   try:
     resp = make_response(feed.rss_str(pretty=True))
