@@ -103,7 +103,7 @@ def feed(uri, verif):
     try:
       with tempfile.NamedTemporaryFile(delete=False, dir=FEED_DIR) as f:
 	encoded = jsonpickle.encode(parsed)
-	indented = json.dumps(json.loads(encoded), indent=4)
+	indented = json.dumps(json.loads(encoded), indent=4, sort_keys=True)
 	f.write(indented)
 	f.flush()
 	os.rename(f.name, cachefile)
