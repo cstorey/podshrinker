@@ -18,6 +18,7 @@ import urlparse
 import logging
 from concurrent import futures
 import jsonpickle
+import json
 
 OPUS_TYPE = 'audio/ogg; codecs=opus'
 
@@ -99,12 +100,17 @@ def feed(uri, verif):
     parsed = cached
 
   def save_to_cache():
-    with tempfile.NamedTemporaryFile(delete=False, dir=FEED_DIR) as f:
-      f.write(jsonpickle.encode(parsed))
-      f.flush()
-      os.rename(f.name, cachefile)
-      os.chmod(cachefile, 0644)
-      app.logger.debug("Saved cache to cachefile:%r", cachefile)
+    try:
+      with tempfile.NamedTemporaryFile(delete=False, dir=FEED_DIR) as f:
+	encoded = jsonpickle.encode(parsed)
+	indented = json.dumps(json.loads(encoded), indent=4)
+	f.write(indented)
+	f.flush()
+	os.rename(f.name, cachefile)
+	os.chmod(cachefile, 0644)
+	app.logger.debug("Saved cache to cachefile:%r", cachefile)
+    except Exception, e:
+      app.logger.error("WAh?: %r", e)
 
   pool.submit(save_to_cache)
 
