@@ -22,9 +22,11 @@ import json
 
 OPUS_TYPE = 'audio/ogg; codecs=opus'
 
-log = logging.getLogger(__name__)
+BLKSZ = 1 << 16
+
 app = Flask(__name__)
 
+log = app.logger
 
 pool = futures.ThreadPoolExecutor(max_workers=4)
 
@@ -32,7 +34,7 @@ pool = futures.ThreadPoolExecutor(max_workers=4)
 def setup_logging():
     if not app.debug:
         # In production mode, add log handler to sys.stderr.
-        app.logger.addHandler(logging.StreamHandler())
+        # app.logger.addHandler(logging.StreamHandler())
         app.logger.setLevel(logging.DEBUG)
 
 HMAC_KEY = os.environ['MAC_KEY']
@@ -167,7 +169,7 @@ def file_reader(fname):
 
 def stream(f):
   while True:
-    data = f.read(4096)
+    data = f.read(BLKSZ)
     if not data:
       break
     yield data
@@ -209,9 +211,24 @@ def transcode_do(uri):
     if not os.path.isfile(orig):
       log.debug("Fetch: " + uri)
       blob = requests.get(uri, stream=True)
-
+      app.logger.debug("Headers:%r", blob.headers)
+      
       with tempfile.NamedTemporaryFile(delete=False, dir=MEDIA_DIR) as outf:
-	shutil.copyfileobj(blob.raw, outf)
+	clen = float(blob.headers['content-length']) if 'content-length' in blob.headers else None
+	sofar = 0
+	while True:
+	  data = blob.raw.read(BLKSZ)
+	  if not data:
+	    break
+	  outf.write(data)
+	  sofar += len(data)
+	  if clen:
+	    app.logger.debug("Progress: %r/%r (%f%%)", sofar, clen, 100.0*sofar/clen)
+	  else:
+	    app.logger.debug("Progress: %r/?", sofar)
+	yield ''
+
+	#shutil.copyfileobj(blob.raw, outf)
 	os.rename(outf.name, orig)
 	os.chmod(orig, 0644)
 	app.logger.debug("Saved original to %r", orig)
@@ -223,7 +240,7 @@ def transcode_do(uri):
 	proc = subprocess.Popen(cmd, stdout=subprocess.PIPE)
 	try:
 	    while True:
-		data = proc.stdout.read(1024)
+		data = proc.stdout.read(BLKSZ)
 		if not data:
 		  break
 		outf.write(data)
