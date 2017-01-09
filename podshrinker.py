@@ -20,7 +20,7 @@ from concurrent import futures
 import jsonpickle
 import json
 
-MEDIA_TYPE = 'audio/aac'
+OPUS_TYPE = 'audio/ogg; codecs=opus'
 
 BLKSZ = 1 << 16
 
@@ -135,7 +135,7 @@ def feed(uri, verif):
 		id = l.href
 	      storename = transcoded_href(l.href)
 	      entry.enclosure(urlparse.urljoin(request.url, storename), l.get('size', None),
-		  l.get('type', MEDIA_TYPE))
+		  l.get('type', OPUS_TYPE))
 	  elif l.rel == 'alternate' and 'href' in l:
 	      entry.link(**l)
 
@@ -176,7 +176,7 @@ def stream(f):
 
 
 
-@app.route('/audio/<uri>/<verif>.aac')
+@app.route('/audio/<uri>/<verif>.opus')
 def audio(uri, verif):
   uri = base64.urlsafe_b64decode(uri.encode('utf8'))
   verif = base64.urlsafe_b64decode(verif.encode('utf8'))
@@ -187,7 +187,7 @@ def audio(uri, verif):
   verify_uri(uri)
 
   gen = transcode_do(uri)
-  return Response(gen, mimetype=MEDIA_TYPE)
+  return Response(gen, mimetype=OPUS_TYPE)
 
 
 def transcoded_href(uri):
@@ -205,7 +205,7 @@ def pathfor(uri, suff, dir):
     return os.path.join(dir, "%s%s" % (storebase, suff))
 
 def transcode_do(uri):
-    storename = pathfor(uri, '.aac', MEDIA_DIR)
+    storename = pathfor(uri, '.opus', MEDIA_DIR)
     orig = pathfor(uri, '.orig', MEDIA_DIR)
 
     if not os.path.isfile(orig):
@@ -234,7 +234,7 @@ def transcode_do(uri):
 	app.logger.debug("Saved original to %r", orig)
 
     if not os.path.isfile(storename):
-      with tempfile.NamedTemporaryFile(delete=False, suffix=".aac", dir=MEDIA_DIR) as outf:
+      with tempfile.NamedTemporaryFile(delete=False, suffix=".opus", dir=MEDIA_DIR) as outf:
 	cmd = transcode_command(orig)
 	app.logger.debug("Running:%r", cmd)
 	proc = subprocess.Popen(cmd, stdout=subprocess.PIPE)
@@ -270,8 +270,8 @@ def transcode_do(uri):
 
 def transcode_command(orig, bitrate=32):
   return ["ffmpeg",  "-i", orig,
-    "-stats", '-strict', '-2',
-    "-c:a", "aac", "-b:a", str(bitrate*1024), "-f", "adts",
+    "-stats",
+    "-acodec", "libopus", "-b:a", str(bitrate*1024), "-compression_level", "10", "-f", "opus",
     "-y", "/dev/stdout"]
 
 if __name__ == '__main__':
