@@ -175,6 +175,9 @@ def stream(f):
     yield data
 
 
+@app.route('/audio-2/<verif>/<uri>/<fname>.opus')
+def audio_2(verif, uri, fname):
+  return audio(uri, verif)
 
 @app.route('/audio/<uri>/<verif>.opus')
 def audio(uri, verif):
@@ -192,7 +195,8 @@ def audio(uri, verif):
 
 def transcoded_href(uri):
     verif = hmac.new(HMAC_KEY, uri.encode('utf8'), digestmod=pyblake2.blake2s).digest()
-    return url_for('audio', uri=base64.urlsafe_b64encode(uri), verif=base64.urlsafe_b64encode(verif))
+    fname = os.path.basename(uri)
+    return url_for('audio_2', uri=base64.urlsafe_b64encode(uri), verif=base64.urlsafe_b64encode(verif), fname=fname)
 
 def pathfor(uri, suff, dir):
     maxlen = min(os.pathconf(dir, 'PC_PATH_MAX') - len(dir.encode('utf8')),
