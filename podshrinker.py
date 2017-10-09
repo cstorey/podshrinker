@@ -272,7 +272,7 @@ def transcode_do(uri):
       for chunk in file_reader(storename):
 	yield chunk
 
-def transcode_command(orig, bitrate=32):
+def transcode_command(orig, bitrate=24):
   return ["ffmpeg",  "-i", orig,
     "-stats",
     "-acodec", "libopus", "-b:a", str(bitrate*1024), "-compression_level", "10", "-f", "opus",
