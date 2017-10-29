@@ -275,6 +275,7 @@ def transcode_do(uri):
 def transcode_command(orig, bitrate=24):
   return ["ffmpeg",  "-i", orig,
     "-stats",
+    "-af", "acompressor=threshold=-24dB:ratio=16:attack=25:release=1000:makeup=20dB",
     "-acodec", "libopus", "-b:a", str(bitrate*1024), "-compression_level", "10", "-f", "opus",
     "-y", "/dev/stdout"]
 
