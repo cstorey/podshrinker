@@ -21,6 +21,8 @@ Executable podshrinker
     mtl                       >= 2     && < 3,
     blaze-html,
     text,
+    cryptonite		      >= 0.24,
+    memory,
     snap-core                 >= 1.0   && < 1.1,
     snap-server               >= 1.0   && < 1.1
 

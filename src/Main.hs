@@ -6,12 +6,17 @@ import           Snap.Core
 import           Snap.Util.FileServe
 import           Snap.Http.Server
 import           Data.ByteString.Lazy as L
+import           Data.ByteString as B
 import           Data.Text.Encoding (decodeUtf8)
 import           Data.Text
 import           Text.Blaze.Html5 ((!))
 import qualified Text.Blaze.Html5 as H
 import qualified Text.Blaze.Html5.Attributes as A
 import           Text.Blaze.Html.Renderer.Utf8 (renderHtml)
+import           Crypto.MAC.HMAC (HMAC, hmac, hmacGetDigest)
+import           Crypto.Hash.Algorithms (Blake2s_256)
+import           Crypto.Hash (Digest)
+import           Data.ByteArray.Encoding (convertToBase, Base(Base64URLUnpadded))
 
 
 main :: IO ()
@@ -32,10 +37,8 @@ main = quickHttpServe site
 indexPage :: Snap()
 indexPage = do
     uri <-  getParam "uri"
-    let uri2 = fmap decodeUtf8 uri
-
     modifyResponse $ addHeader "Content-Type" "text/html; charset=UTF-8"
-    writeLBS $ response uri2
+    writeLBS $ response uri
   where
     content uri = do
       H.docType
@@ -50,12 +53,25 @@ indexPage = do
           H.p $ maybe noUri hasUri uri
 
     noUri = H.span "No url"
-    hasUri uri = H.p $ do
+    hasUri uri = do
+      H.p $ do
         H.span "URI: "
-        H.toHtml uri
-    response :: Maybe Text -> L.ByteString
+        H.toHtml $ decodeUtf8 uri
+      H.p $ do
+        H.span "Mac: "
+        H.toHtml $ signUri uri
     response uri = renderHtml $ content uri
 
+
+signUri :: B.ByteString -> Text
+
+signUri uri = undigest
+  where
+    key = ("FIXME" :: B.ByteString)
+    mac :: Digest Blake2s_256
+    mac = hmacGetDigest $ hmac key uri
+
+    undigest = decodeUtf8 $ convertToBase Base64URLUnpadded mac
 
 site :: Snap ()
 site =
