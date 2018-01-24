@@ -20,6 +20,7 @@ Executable podshrinker
     monad-control             >= 1.0   && < 1.1,
     mtl                       >= 2     && < 3,
     blaze-html,
+    text,
     snap-core                 >= 1.0   && < 1.1,
     snap-server               >= 1.0   && < 1.1
 
