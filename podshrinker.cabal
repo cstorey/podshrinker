@@ -23,6 +23,7 @@ Executable podshrinker
     text,
     cryptonite		      >= 0.24,
     memory,
+    network-uri,
     snap-core                 >= 1.0   && < 1.1,
     snap-server               >= 1.0   && < 1.1
 
