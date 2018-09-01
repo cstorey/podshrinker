@@ -189,7 +189,7 @@ def audio(uri, verif):
 
   verify_uri(uri)
 
-  gen = transcode_do(uri)
+  gen = transcode_do(uri, ua=request.headers.get('user-agent', None))
   return Response(gen, mimetype=OPUS_TYPE)
 
 
@@ -208,13 +208,13 @@ def pathfor(uri, suff, dir):
     storebase = storebase[:maxlen-len(suff.encode('utf8'))]
     return os.path.join(dir, "%s%s" % (storebase, suff))
 
-def transcode_do(uri):
+def transcode_do(uri, ua=None):
     storename = pathfor(uri, '.opus', MEDIA_DIR)
     orig = pathfor(uri, '.orig', MEDIA_DIR)
 
     if not os.path.isfile(orig):
       log.debug("Fetch: " + uri)
-      blob = requests.get(uri, stream=True)
+      blob = requests.get(uri, stream=True, headers={'user-agent': ua})
       app.logger.debug("Headers:%r", blob.headers)
       
       with tempfile.NamedTemporaryFile(delete=False, dir=MEDIA_DIR) as outf:
