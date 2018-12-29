@@ -5,6 +5,7 @@ from urlparse import urljoin
 import feedparser
 from feedgen.feed import FeedGenerator
 from time import mktime
+import time
 from datetime import datetime
 import pytz
 import requests
@@ -216,6 +217,8 @@ def transcode_do(uri, ua=None):
       log.debug("Fetch: " + uri)
       blob = requests.get(uri, stream=True, headers={'user-agent': ua})
       app.logger.debug("Headers:%r", blob.headers)
+
+      prev_stamp = 0
       
       with tempfile.NamedTemporaryFile(delete=False, dir=MEDIA_DIR) as outf:
 	clen = float(blob.headers['content-length']) if 'content-length' in blob.headers else None
@@ -226,10 +229,13 @@ def transcode_do(uri, ua=None):
 	    break
 	  outf.write(data)
 	  sofar += len(data)
-	  if clen:
-	    app.logger.debug("Progress: %r/%r (%f%%)", sofar, clen, 100.0*sofar/clen)
-	  else:
-	    app.logger.debug("Progress: %r/?", sofar)
+          now = time.time()
+	  if sofar == clen or (now - prev_stamp) > 1.0:
+            prev_stamp = now
+	    if clen:
+	      app.logger.debug("Progress: %r/%r (%f%%)", sofar, clen, 100.0*sofar/clen)
+	    else:
+	      app.logger.debug("Progress: %r/?", sofar)
 	yield ''
 
 	#shutil.copyfileobj(blob.raw, outf)
