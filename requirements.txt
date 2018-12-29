@@ -4,11 +4,11 @@ click==6.6
 dateutils==0.6.6
 feedgen==0.3.2
 feedparser==5.2.1
-Flask==0.11.1
+Flask==1.0.2
 futures==3.0.5
 idna==2.8
 itsdangerous==0.24
-Jinja2==2.8
+Jinja2==2.10
 jsonpickle==0.9.3
 lxml==3.6.4
 MarkupSafe==0.23
@@ -20,4 +20,4 @@ requests==2.21.0
 six==1.10.0
 urllib3==1.24.1
 waitress==1.0.0
-Werkzeug==0.11.11
+Werkzeug==0.14.1
