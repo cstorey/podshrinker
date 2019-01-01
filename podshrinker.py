@@ -57,11 +57,9 @@ def verify_uri(uri):
 
 @app.route('/')
 def index():
-    try:
+    encoded = None
+    if 'uri' in request.args:
       uri = request.args['uri'].encode('utf8')
-    except KeyError:
-      encoded = None
-    else:
       verify_uri(uri)
       mac = hmac.new(HMAC_KEY, uri.encode('utf8'), digestmod=pyblake2.blake2s).digest()
       encoded = urljoin(request.url, url_for('feed', uri=base64.urlsafe_b64encode(uri),
