@@ -64,9 +64,10 @@ def index():
       mac = hmac.new(HMAC_KEY, uri.encode('utf8'), digestmod=pyblake2.blake2s).digest()
       encoded = urljoin(request.url, url_for('feed', uri=base64.urlsafe_b64encode(uri),
 	  verif=base64.urlsafe_b64encode(mac)))
-
-    return render_template("root.html",
-	encode_rss_action=url_for('index'),
+      return redirect(encoded, code=303)
+    else:
+      return render_template("root.html",
+	  encode_rss_action=url_for('index'),
 	encoded=encoded
 	)
 
