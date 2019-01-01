@@ -20,6 +20,7 @@ import logging
 from concurrent import futures
 import jsonpickle
 import json
+import re
 
 OPUS_TYPE = 'audio/ogg; codecs=opus'
 
@@ -59,8 +60,11 @@ def verify_uri(uri):
 def index():
     encoded = None
     if 'uri' in request.args:
-      uri = request.args['uri'].encode('utf8')
+      uri = request.args['uri']
       verify_uri(uri)
+
+      uri = unitunes(uri)
+
       mac = hmac.new(HMAC_KEY, uri.encode('utf8'), digestmod=pyblake2.blake2s).digest()
       encoded = urljoin(request.url, url_for('feed', uri=base64.urlsafe_b64encode(uri),
 	  verif=base64.urlsafe_b64encode(mac)))
@@ -192,6 +196,36 @@ def audio(uri, verif):
   gen = transcode_do(uri, ua=request.headers.get('user-agent', None))
   return Response(gen, mimetype=OPUS_TYPE)
 
+
+def unitunes(uri):
+  p = urlparse.urlparse(uri)
+  # ParseResult(scheme='https', netloc='itunes.apple.com', path='/us/podcast/the-mad-scientist-podcast/id1114969265', params='', query='mt=2', fragment='')
+  app.logger.debug("Parse url: %r", p)
+  if p.netloc != 'itunes.apple.com':
+    app.logger.debug("Not an itunes URL: %r", uri)
+    return uri
+
+  m = re.search(r'/podcast/[^/]*/id([0-9]*)$', p.path)
+
+  if not m:
+    app.logger.debug("Can't tell this is a podcast?")
+    # This still makes no sense, but ...
+    return uri
+
+  pid = m.group(1)
+  app.logger.debug("Podcast id: %r", pid)
+  resp = requests.get('https://itunes.apple.com/lookup?id={}&entity=podcast'.format(pid))
+
+  app.logger.debug("Response: %r", resp)
+  json = resp.json()
+  for result in json.get('results', []):
+    app.logger.debug("Result: %r", result)
+    feedUrl = result['feedUrl']
+    app.logger.debug("Found feed URL for %r: %r", result['collectionName'], feedUrl)
+    return feedUrl
+
+  app.logger.debug("No result found? %r", json)
+  return uri
 
 def transcoded_href(uri):
     verif = hmac.new(HMAC_KEY, uri.encode('utf8'), digestmod=pyblake2.blake2s).digest()
