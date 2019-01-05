@@ -15,7 +15,7 @@ MarkupSafe==0.23
 pyblake2==0.9.3
 python-dateutil==2.5.3
 pytz==2016.6.1
-PyYAML==3.12
+PyYAML==4.2b4
 requests==2.21.0
 six==1.10.0
 urllib3==1.24.1
