@@ -1,4 +1,5 @@
 from flask import Flask, render_template, request, abort, redirect, url_for, make_response, Response
+from werkzeug.middleware.proxy_fix import ProxyFix
 import hmac, pyblake2
 import base64
 from urlparse import urljoin
@@ -42,7 +43,15 @@ def setup_logging():
 HMAC_KEY = os.environ['MAC_KEY']
 FEED_DIR = os.environ.get('FEED_DIR', '/tmp/pod-feed-store/')
 MEDIA_DIR = os.environ.get('MEDIA_DIR', '/tmp/pod-opus-store/')
+PROXY_DEPTH = int(os.environ.get('PROXY_DEPTH', 0))
 
+app.wsgi_app = ProxyFix(
+    app.wsgi_app,
+    x_for=PROXY_DEPTH,
+    x_proto=PROXY_DEPTH,
+    x_host=PROXY_DEPTH,
+    x_port=PROXY_DEPTH,
+)
 
 @app.before_first_request
 def setup_store():
@@ -321,7 +330,5 @@ def transcode_command(orig, bitrate=24):
 if __name__ == '__main__':
   from waitress import serve
   import os
-  from werkzeug.contrib.fixers import ProxyFix
-  app.wsgi_app = ProxyFix(app.wsgi_app)
   port = int(os.environ.get('PORT', 5000))
   serve(app, port=port)

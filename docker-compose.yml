@@ -9,6 +9,7 @@ services:
     environment:
       - FEED_DIR=/var/lib/feed-store
       - MEDIA_DIR=/var/lib/media-store
+      - PROXY_DEPTH=1
     restart: always
     volumes:
       - /tmp/feed-store:/var/lib/feed-store

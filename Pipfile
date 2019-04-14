@@ -15,6 +15,6 @@ pytz = "*"
 futures = "*"
 jsonpickle = "*"
 waitress = "*"
-werkzeug = "~=0.14.1"
+werkzeug = "~=0.15.0"
 
 [scripts]
