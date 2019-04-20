@@ -1,4 +1,4 @@
-FROM ubuntu:18.04
+FROM ubuntu:19.04
 RUN apt-get update && apt-get -y install eatmydata
 RUN eatmydata apt-get update && eatmydata apt-get -y install python-virtualenv gcc python-dev python-pip libxml2-dev libxslt1-dev ffmpeg sudo 
 RUN pip install pipenv
