@@ -107,9 +107,14 @@ def feed(uri, verif):
     except Exception, e:
       app.logger.warn("Could not load cache:%r", e)
 
-  app.logger.debug("Parse feed: %r; etag:%r; modified:%r", uri, etag, modified)
+  app.logger.debug("Parse feed: %r; status:%r, etag:%r; modified:%r", uri, etag, modified)
   parsed = feedparser.parse(uri, etag=etag, modified=modified)
+
   app.logger.debug("Parsed feed: %r; %r", uri, 'status' in parsed and parsed.status)
+  if parsed.status < 200 or parsed.status >= 400:
+    app.logger.warn("Non okay status code, 404?")
+    abort(404)
+
 
   if cached and not parsed.entries:
     parsed = cached
