@@ -107,7 +107,7 @@ def feed(uri, verif):
     except Exception, e:
       app.logger.warn("Could not load cache:%r", e)
 
-  app.logger.debug("Parse feed: %r; status:%r, etag:%r; modified:%r", uri, etag, modified)
+  app.logger.debug("Parse feed: %r; etag:%r; modified:%r", uri, etag, modified)
   parsed = feedparser.parse(uri, etag=etag, modified=modified)
 
   app.logger.debug("Parsed feed: %r; %r", uri, 'status' in parsed and parsed.status)
@@ -266,7 +266,7 @@ def transcode_do(uri, ua=None):
       app.logger.debug("Headers:%r", blob.headers)
 
       prev_stamp = 0
-      
+
       with tempfile.NamedTemporaryFile(delete=False, dir=MEDIA_DIR) as outf:
 	clen = float(blob.headers['content-length']) if 'content-length' in blob.headers else None
 	sofar = 0
