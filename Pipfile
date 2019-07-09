@@ -15,5 +15,6 @@ futures = "*"
 jsonpickle = "*"
 waitress = "*"
 werkzeug = "~=0.15.4"
+feedgen = "~=0.7.0"
 
 [scripts]
