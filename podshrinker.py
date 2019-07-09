@@ -215,11 +215,11 @@ def unitunes(uri):
   p = urlparse.urlparse(uri)
   # ParseResult(scheme='https', netloc='itunes.apple.com', path='/us/podcast/the-mad-scientist-podcast/id1114969265', params='', query='mt=2', fragment='')
   app.logger.debug("Parse url: %r", p)
-  if p.netloc != 'itunes.apple.com':
+  if p.netloc not in ['itunes.apple.com', 'podcasts.apple.com']:
     app.logger.debug("Not an itunes URL: %r", uri)
     return uri
 
-  m = re.search(r'/podcast/[^/]*/id([0-9]*)$', p.path)
+  m = re.search(r'/podcast/(?:[^/]*/)?id([0-9]*)$', p.path)
 
   if not m:
     app.logger.debug("Can't tell this is a podcast?")
