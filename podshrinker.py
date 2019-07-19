@@ -2,7 +2,7 @@ from flask import Flask, render_template, request, abort, redirect, url_for, mak
 from werkzeug.middleware.proxy_fix import ProxyFix
 import hmac, pyblake2
 import base64
-from urlparse import urljoin
+from urllib.parse import urljoin, urlparse, quote_plus
 import feedparser
 from feedgen.feed import FeedGenerator
 from time import mktime
@@ -13,10 +13,8 @@ import requests
 import tempfile
 import os, sys
 import subprocess
-import urllib
 import hmac, pyblake2, base64
 import shutil
-import urlparse
 import logging
 from concurrent import futures
 import jsonpickle
@@ -40,7 +38,7 @@ def setup_logging():
         # app.logger.addHandler(logging.StreamHandler())
         app.logger.setLevel(logging.DEBUG)
 
-HMAC_KEY = os.environ['MAC_KEY']
+HMAC_KEY = os.environ['MAC_KEY'].encode('utf8')
 FEED_DIR = os.environ.get('FEED_DIR', '/tmp/pod-feed-store/')
 MEDIA_DIR = os.environ.get('MEDIA_DIR', '/tmp/pod-opus-store/')
 PROXY_DEPTH = int(os.environ.get('PROXY_DEPTH', 0))
@@ -60,7 +58,7 @@ def setup_store():
       os.makedirs(d)
 
 def verify_uri(uri):
-  p = urlparse.urlparse(uri)
+  p = urlparse(uri)
   if p.scheme not in ('http', 'https'):
     app.logger.warn("Bad scheme (%r) passed in uri: %s", p.scheme, uri)
     abort(404)
@@ -75,23 +73,25 @@ def index():
       uri = unitunes(uri)
 
       mac = hmac.new(HMAC_KEY, uri.encode('utf8'), digestmod=pyblake2.blake2s).digest()
-      encoded = urljoin(request.url, url_for('feed', uri=base64.urlsafe_b64encode(uri),
-	  verif=base64.urlsafe_b64encode(mac)))
+      print(repr((uri, uri.encode('utf8'), mac)))
+      rel_url = url_for('feed', uri=base64.urlsafe_b64encode(uri.encode('utf8')), verif=base64.urlsafe_b64encode(mac))
+      encoded = urljoin(request.url, rel_url)
       return redirect(encoded, code=303)
     else:
       return render_template("root.html",
-	  encode_rss_action=url_for('index'),
-	encoded=encoded
-	)
+          encode_rss_action=url_for('index'),
+        encoded=encoded
+        )
 
 @app.route('/feed/<uri>/<verif>')
 def feed(uri, verif):
   uri = base64.urlsafe_b64decode(uri.encode('utf8'))
   verif = base64.urlsafe_b64decode(verif.encode('utf8'))
-  mac = hmac.new(HMAC_KEY, uri.encode('utf8'), digestmod=pyblake2.blake2s).digest()
+  mac = hmac.new(HMAC_KEY, uri, digestmod=pyblake2.blake2s).digest()
   if not hmac.compare_digest(verif, mac):
     abort(403)
 
+  uri = uri.decode('utf8')
   verify_uri(uri)
 
   cachefile = pathfor(uri, '.picklejson', FEED_DIR)
@@ -100,11 +100,11 @@ def feed(uri, verif):
   if os.path.isfile(cachefile):
     try:
       with file(cachefile) as f:
-	cached = jsonpickle.decode(f.read())
-	app.logger.debug("Loaded cache from cachefile:%r", cachefile)
-	etag = cached.etag if 'etag' in cached else None
-	modified = cached.modified if 'modified' in cached else None
-    except Exception, e:
+        cached = jsonpickle.decode(f.read())
+        app.logger.debug("Loaded cache from cachefile:%r", cachefile)
+        etag = cached.etag if 'etag' in cached else None
+        modified = cached.modified if 'modified' in cached else None
+    except Exception as e:
       app.logger.warn("Could not load cache:%r", e)
 
   app.logger.debug("Parse feed: %r; etag:%r; modified:%r", uri, etag, modified)
@@ -120,17 +120,14 @@ def feed(uri, verif):
     parsed = cached
 
   def save_to_cache():
-    try:
-      with tempfile.NamedTemporaryFile(delete=False, dir=FEED_DIR) as f:
-	encoded = jsonpickle.encode(parsed)
-	indented = json.dumps(json.loads(encoded), indent=4, sort_keys=True)
-	f.write(indented)
-	f.flush()
-	os.rename(f.name, cachefile)
-	os.chmod(cachefile, 0644)
-	app.logger.debug("Saved cache to cachefile:%r", cachefile)
-    except Exception, e:
-      app.logger.error("WAh?: %r", e)
+    with tempfile.NamedTemporaryFile(delete=False, dir=FEED_DIR) as f:
+      encoded = jsonpickle.encode(parsed)
+      indented = json.dumps(json.loads(encoded), indent=4, sort_keys=True)
+      f.write(indented)
+      f.flush()
+      os.rename(f.name, cachefile)
+      os.chmod(cachefile, 0o644)
+      app.logger.debug("Saved cache to cachefile:%r", cachefile)
 
   pool.submit(save_to_cache)
 
@@ -148,28 +145,28 @@ def feed(uri, verif):
       id = e.id if 'id' in e else None
 
       for l in (e.links if 'links' in e else []):
-	  if l.rel == 'enclosure' and 'href' in l:
-	      if not id:
-		id = l.href
-	      storename = transcoded_href(l.href)
-	      entry.enclosure(urlparse.urljoin(request.url, storename), l.get('size', None),
-		  l.get('type', OPUS_TYPE))
-	  elif l.rel == 'alternate' and 'href' in l:
-	      entry.link(**l)
+          if l.rel == 'enclosure' and 'href' in l:
+              if not id:
+                id = l.href
+              storename = transcoded_href(l.href)
+              entry.enclosure(urljoin(request.url, storename), l.get('size', None),
+                  l.get('type', OPUS_TYPE))
+          elif l.rel == 'alternate' and 'href' in l:
+              entry.link(**l)
 
       for c in (e.content if 'content' in e else []):
-	  if 'type' in c and c.type.startswith('text/html'):
-	      entry.content(content=c.value, type='html')
-	  else:
-	      entry.content(content=c.value, type='text')
+          if 'type' in c and c.type.startswith('text/html'):
+              entry.content(content=c.value, type='html')
+          else:
+              entry.content(content=c.value, type='text')
 
       entry.id(id)
       entry.title(e.get('title', None) or '???')
       entry.description(e.get('description', None) or '???')
       if 'updated_parsed' in e and e.updated_parsed:
-	  entry.updated(datetime.fromtimestamp(mktime(e.updated_parsed), pytz.UTC))
+          entry.updated(datetime.fromtimestamp(mktime(e.updated_parsed), pytz.UTC))
       if 'published_parsed' in e and e.published_parsed:
-	  entry.published(datetime.fromtimestamp(mktime(e.published_parsed), pytz.UTC))
+          entry.published(datetime.fromtimestamp(mktime(e.published_parsed), pytz.UTC))
     finally:
       pass
 
@@ -177,7 +174,7 @@ def feed(uri, verif):
     resp = make_response(feed.rss_str(pretty=True))
     resp.headers['content-type'] = 'application/xml'
     return resp
-  except BaseException, e:
+  except BaseException as e:
     raise e
 
 def file_reader(fname):
@@ -201,10 +198,11 @@ def audio_2(verif, uri, fname):
 def audio(uri, verif):
   uri = base64.urlsafe_b64decode(uri.encode('utf8'))
   verif = base64.urlsafe_b64decode(verif.encode('utf8'))
-  mac = hmac.new(HMAC_KEY, uri.encode('utf8'), digestmod=pyblake2.blake2s).digest()
+  mac = hmac.new(HMAC_KEY, uri, digestmod=pyblake2.blake2s).digest()
   if not hmac.compare_digest(verif, mac):
     abort(403)
 
+  uri = uri.decode('utf8')
   verify_uri(uri)
 
   gen = transcode_do(uri, ua=request.headers.get('user-agent', None))
@@ -212,7 +210,7 @@ def audio(uri, verif):
 
 
 def unitunes(uri):
-  p = urlparse.urlparse(uri)
+  p = urlparse(uri)
   # ParseResult(scheme='https', netloc='itunes.apple.com', path='/us/podcast/the-mad-scientist-podcast/id1114969265', params='', query='mt=2', fragment='')
   app.logger.debug("Parse url: %r", p)
   if p.netloc not in ['itunes.apple.com', 'podcasts.apple.com']:
@@ -244,14 +242,14 @@ def unitunes(uri):
 def transcoded_href(uri):
     verif = hmac.new(HMAC_KEY, uri.encode('utf8'), digestmod=pyblake2.blake2s).digest()
     fname = os.path.basename(uri)
-    return url_for('audio_2', uri=base64.urlsafe_b64encode(uri), verif=base64.urlsafe_b64encode(verif), fname=fname)
+    return url_for('audio_2', uri=base64.urlsafe_b64encode(uri.encode('utf8')), verif=base64.urlsafe_b64encode(verif), fname=fname)
 
 def pathfor(uri, suff, dir):
     maxlen = min(os.pathconf(dir, 'PC_PATH_MAX') - len(dir.encode('utf8')),
-	os.pathconf(dir, 'PC_NAME_MAX'))
+        os.pathconf(dir, 'PC_NAME_MAX'))
 
-    storebase = "%s;%s" % (urllib.quote_plus(uri),
-	base64.urlsafe_b64encode(pyblake2.blake2s(uri.encode('utf8')).digest()))
+    storebase = "%s;%s" % (quote_plus(uri),
+        base64.urlsafe_b64encode(pyblake2.blake2s(uri.encode('utf8')).digest()))
 
     storebase = storebase[:maxlen-len(suff.encode('utf8'))]
     return os.path.join(dir, "%s%s" % (storebase, suff))
@@ -268,62 +266,62 @@ def transcode_do(uri, ua=None):
       prev_stamp = 0
 
       with tempfile.NamedTemporaryFile(delete=False, dir=MEDIA_DIR) as outf:
-	clen = float(blob.headers['content-length']) if 'content-length' in blob.headers else None
-	sofar = 0
-	while True:
-	  data = blob.raw.read(BLKSZ)
-	  if not data:
-	    break
-	  outf.write(data)
-	  sofar += len(data)
+        clen = float(blob.headers['content-length']) if 'content-length' in blob.headers else None
+        sofar = 0
+        while True:
+          data = blob.raw.read(BLKSZ)
+          if not data:
+            break
+          outf.write(data)
+          sofar += len(data)
           now = time.time()
-	  if sofar == clen or (now - prev_stamp) > 1.0:
+          if sofar == clen or (now - prev_stamp) > 1.0:
             prev_stamp = now
-	    if clen:
-	      app.logger.debug("Progress: %r/%r (%f%%)", sofar, clen, 100.0*sofar/clen)
-	    else:
-	      app.logger.debug("Progress: %r/?", sofar)
-	yield ''
+            if clen:
+              app.logger.debug("Progress: %r/%r (%f%%)", sofar, clen, 100.0*sofar/clen)
+            else:
+              app.logger.debug("Progress: %r/?", sofar)
+        yield ''
 
-	#shutil.copyfileobj(blob.raw, outf)
-	os.rename(outf.name, orig)
-	os.chmod(orig, 0644)
-	app.logger.debug("Saved original to %r", orig)
+        #shutil.copyfileobj(blob.raw, outf)
+        os.rename(outf.name, orig)
+        os.chmod(orig, 0o644)
+        app.logger.debug("Saved original to %r", orig)
 
     if not os.path.isfile(storename):
       with tempfile.NamedTemporaryFile(delete=False, suffix=".opus", dir=MEDIA_DIR) as outf:
-	cmd = transcode_command(orig)
-	app.logger.debug("Running:%r", cmd)
-	proc = subprocess.Popen(cmd, stdout=subprocess.PIPE)
-	try:
-	    while True:
-		data = proc.stdout.read(BLKSZ)
-		if not data:
-		  break
-		outf.write(data)
-		yield data
-	    assert proc.wait() == 0
-	    os.rename(outf.name, storename)
-	    os.chmod(storename, 0644)
-	    app.logger.debug("Saved transcoded to %r", orig)
-	finally:
-	  app.logger.debug("Finishing... %r", proc.poll())
-	  proc.stdout.close()
-	  if proc.poll() is None:
-	    app.logger.debug("TERM %r", proc.pid)
-	    proc.terminate()
-	  if proc.poll() is None:
-	    app.logger.debug("KILL %r", proc.pid)
-	    proc.kill()
-	    proc.wait()
-	  if proc.poll() is None:
-	    app.logger.debug("Leaking child %r", proc.pid)
+        cmd = transcode_command(orig)
+        app.logger.debug("Running:%r", cmd)
+        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE)
+        try:
+            while True:
+                data = proc.stdout.read(BLKSZ)
+                if not data:
+                  break
+                outf.write(data)
+                yield data
+            assert proc.wait() == 0
+            os.rename(outf.name, storename)
+            os.chmod(storename, 0o644)
+            app.logger.debug("Saved transcoded to %r", orig)
+        finally:
+          app.logger.debug("Finishing... %r", proc.poll())
+          proc.stdout.close()
+          if proc.poll() is None:
+            app.logger.debug("TERM %r", proc.pid)
+            proc.terminate()
+          if proc.poll() is None:
+            app.logger.debug("KILL %r", proc.pid)
+            proc.kill()
+            proc.wait()
+          if proc.poll() is None:
+            app.logger.debug("Leaking child %r", proc.pid)
 
-	  if os.path.isfile(outf.name):
-	    os.unlink(outf.name)
+          if os.path.isfile(outf.name):
+            os.unlink(outf.name)
     else:
       for chunk in file_reader(storename):
-	yield chunk
+        yield chunk
 
 def transcode_command(orig, bitrate=16):
   return ["ffmpeg",  "-i", orig,

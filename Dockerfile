@@ -1,7 +1,7 @@
 FROM ubuntu:19.04
 RUN apt-get update && apt-get -y install eatmydata
-RUN eatmydata apt-get update && eatmydata apt-get -y install python-virtualenv gcc python-dev python-pip libxml2-dev libxslt1-dev ffmpeg sudo 
-RUN pip install pipenv
+RUN eatmydata apt-get update && eatmydata apt-get -y install python-virtualenv gcc python3.7-dev python3-pip libxml2-dev libxslt1-dev ffmpeg sudo
+RUN pip3 install pipenv
 WORKDIR /srv
 ENV LANG=C
 ENV PIPENV_VENV_IN_PROJECT=y
