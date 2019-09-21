@@ -99,7 +99,7 @@ def feed(uri, verif):
   cached = None
   if os.path.isfile(cachefile):
     try:
-      with file(cachefile) as f:
+      with open(cachefile, 'rb') as f:
         cached = jsonpickle.decode(f.read())
         app.logger.debug("Loaded cache from cachefile:%r", cachefile)
         etag = cached.etag if 'etag' in cached else None
@@ -178,7 +178,7 @@ def feed(uri, verif):
     raise e
 
 def file_reader(fname):
-  with file(fname) as f:
+  with open(fname, 'rb') as f:
     for chunk in stream(f):
       yield chunk
 
