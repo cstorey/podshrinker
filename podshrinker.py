@@ -141,7 +141,7 @@ def feed(uri, verif):
 
   for e in parsed.entries:
     try:
-      entry = feed.add_entry()
+      entry = feed.add_entry(order='append')
       id = e.id if 'id' in e else None
 
       for l in (e.links if 'links' in e else []):
