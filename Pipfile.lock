@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "b090373633a347215c22b3c190b285199c20bbe0d9f560b9d160cdc08e27c73f"
+            "sha256": "92350ff1b6488412b1c95cdf3424ce5b3d25c63e1b330643288550afc1aa9a69"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -39,10 +39,10 @@
         },
         "feedgen": {
             "hashes": [
-                "sha256:26557304284007a3c2d772c376a48c0a8ec8e24371c4471455ea89cf568fa114"
+                "sha256:8e811bdbbed6570034950db23a4388453628a70e689a6e8303ccec430f5a804a"
             ],
             "index": "pypi",
-            "version": "==0.8.0"
+            "version": "==0.9.0"
         },
         "feedparser": {
             "hashes": [
@@ -76,10 +76,10 @@
         },
         "jinja2": {
             "hashes": [
-                "sha256:74320bb91f31270f9551d46522e33af46a80c3d619f4a4bf42b3164d30b5911f",
-                "sha256:9fe95f19286cfefaa917656583d020be14e7859c6b0252588391e47db34527de"
+                "sha256:6e7a3c2934694d59ad334c93dd1b6c96699cf24c53fdb8ec848ac6b23e685734",
+                "sha256:d6609ae5ec3d56212ca7d802eda654eaf2310000816ce815361041465b108be4"
             ],
-            "version": "==2.10.3"
+            "version": "==2.11.0"
         },
         "jsonpickle": {
             "hashes": [
