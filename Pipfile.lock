@@ -90,11 +90,11 @@
         },
         "jsonpickle": {
             "hashes": [
-                "sha256:3d71018794242f6b1640f779a94a192500f73ceed9ef579b4f01799171ec3fb3",
-                "sha256:e8ca6ec3f379f5eee6e11380d48db220aacc282b480dea46b11cc6f6009d1cdb"
+                "sha256:8919c166bac0574e3d74425c7559434062002d9dfc0ac2afa6dc746ba4a19439",
+                "sha256:e8d4b7cd0bd6826001a74377df1079a76ad8bae0f909282de2554164c837c8ba"
             ],
             "index": "pypi",
-            "version": "==1.4"
+            "version": "==1.4.1"
         },
         "lxml": {
             "hashes": [
@@ -209,10 +209,10 @@
         },
         "urllib3": {
             "hashes": [
-                "sha256:2f3db8b19923a873b3e5256dc9c2dedfa883e33d87c690d9c7913e1f40673cdc",
-                "sha256:87716c2d2a7121198ebcb7ce7cccf6ce5e9ba539041cfbaeecfb641dc0bf6acc"
+                "sha256:3018294ebefce6572a474f0604c2021e33b3fd8006ecd11d62107a5d2a963527",
+                "sha256:88206b0eb87e6d677d424843ac5209e3fb9d0190d0ee169599165ec25e9d9115"
             ],
-            "version": "==1.25.8"
+            "version": "==1.25.9"
         },
         "waitress": {
             "hashes": [
