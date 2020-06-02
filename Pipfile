@@ -14,7 +14,7 @@ werkzeug = "~=1.0.1"
 feedgen = "~=0.9.0"
 jsonpickle = "~=1.4"
 pytz = "~=2020.1"
-waitress = "~=1.4.3"
+waitress = "~=1.4.4"
 
 [scripts]
 
