@@ -16,6 +16,7 @@ import subprocess
 import hmac, pyblake2, base64
 import shutil
 import logging
+from logging.config import dictConfig
 from concurrent import futures
 import jsonpickle
 import json
@@ -25,18 +26,21 @@ OPUS_TYPE = 'audio/ogg; codecs=opus'
 
 BLKSZ = 1 << 16
 
+dictConfig({
+    'version': 1,
+    'formatters': {'default': {
+        'format': '[%(asctime)s] %(levelname)s in %(module)s: %(message)s',
+    }},
+    'handlers': {},
+    'root': {
+        'level': 'DEBUG',
+        'handlers': []
+    }
+})
+
 app = Flask(__name__)
 
-log = app.logger
-
 pool = futures.ThreadPoolExecutor(max_workers=4)
-
-@app.before_first_request
-def setup_logging():
-    if not app.debug:
-        # In production mode, add log handler to sys.stderr.
-        # app.logger.addHandler(logging.StreamHandler())
-        app.logger.setLevel(logging.DEBUG)
 
 HMAC_KEY = os.environ['MAC_KEY'].encode('utf8')
 FEED_DIR = os.environ.get('FEED_DIR', '/tmp/pod-feed-store/')
@@ -261,7 +265,7 @@ def transcode_do(uri, ua=None):
     orig = pathfor(uri, '.orig', MEDIA_DIR)
 
     if not os.path.isfile(orig):
-      log.debug("Fetch: " + uri)
+      app.logger.debug("Fetch: " + uri)
       blob = requests.get(uri, stream=True, headers={'user-agent': ua})
       app.logger.debug("Headers:%r", blob.headers)
 
