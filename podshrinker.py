@@ -248,11 +248,13 @@ def pathfor(uri, suff, dir):
     maxlen = min(os.pathconf(dir, 'PC_PATH_MAX') - len(dir.encode('utf8')),
         os.pathconf(dir, 'PC_NAME_MAX'))
 
-    storebase = "%s;%s" % (quote_plus(uri),
-        base64.urlsafe_b64encode(pyblake2.blake2s(uri.encode('utf8')).digest()))
+    storebase = \
+        quote_plus(uri) + \
+        ';' + \
+        base64.urlsafe_b64encode(pyblake2.blake2s(uri.encode('utf8')).digest()).decode('ascii')
 
     storebase = storebase[:maxlen-len(suff.encode('utf8'))]
-    return os.path.join(dir, "%s%s" % (storebase, suff))
+    return os.path.join(dir, storebase + suff)
 
 def transcode_do(uri, ua=None):
     storename = pathfor(uri, '.opus', MEDIA_DIR)
