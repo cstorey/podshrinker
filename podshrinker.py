@@ -300,7 +300,7 @@ def transcode_do(uri, ua=None):
         cmd = transcode_command(orig)
         app.logger.debug("Running:%r", cmd)
         proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        _err_logger = threading.Thread(target=spool_stderr, args=(proc.stderr,))
+        _err_logger = threading.Thread(target=spool_stderr, args=(proc,))
         _err_logger.start()
         try:
             while True:
@@ -339,14 +339,14 @@ def transcode_command(orig, bitrate=16):
     "-acodec", "libopus", "-b:a", str(bitrate*1024), "-compression_level", "10", "-f", "opus",
     "-y", "/dev/stdout"]
 
-def spool_stderr(stderr):
+def spool_stderr(proc):
   buf = b''
-  app.logger.debug("Reading from stderr pipe…")
+  app.logger.debug("Reading from stderr pipe of ffmpeg:%d", proc.pid)
   while True:
-    read = stderr.read1(BLKSZ)
-    #app.logger.debug("Read %dbytes from stderr: %r", len(read), read)
+    read = proc.stderr.read1(BLKSZ)
+    #app.logger.debug("ffmpeg:%d; Read %dbytes from stderr: %r", proc.pid, len(read), read)
     if not read:
-      app.logger.debug("stderr EOF")
+      app.logger.debug("ffmpeg:%d; stderr EOF", proc.pid)
       break
 
     buf += read
@@ -354,7 +354,7 @@ def spool_stderr(stderr):
     chunks = [chunk for line in buf.split(b'\n') for chunk in line.split(b'\r')]
     for line in chunks[:-1]:
       if line:
-        app.logger.debug("stderr: %s", line.decode('utf8'))
+        app.logger.debug("ffmpeg:%d; stderr: %s", proc.pid, line.decode('utf8'))
     buf = chunks[-1]
 
 if __name__ == '__main__':
