@@ -304,7 +304,7 @@ def transcode_do(uri, ua=None):
         _err_logger.start()
         try:
             while True:
-                data = proc.stdout.read(BLKSZ)
+                data = proc.stdout.read1(BLKSZ)
                 if not data:
                   break
                 outf.write(data)
