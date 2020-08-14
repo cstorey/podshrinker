@@ -21,6 +21,7 @@ from concurrent import futures
 import jsonpickle
 import json
 import re
+import threading
 
 OPUS_TYPE = 'audio/ogg; codecs=opus'
 
@@ -298,7 +299,9 @@ def transcode_do(uri, ua=None):
       with tempfile.NamedTemporaryFile(delete=False, suffix=".opus", dir=MEDIA_DIR) as outf:
         cmd = transcode_command(orig)
         app.logger.debug("Running:%r", cmd)
-        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE)
+        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        _err_logger = threading.Thread(target=spool_stderr, args=(proc.stderr,))
+        _err_logger.start()
         try:
             while True:
                 data = proc.stdout.read(BLKSZ)
@@ -335,6 +338,24 @@ def transcode_command(orig, bitrate=16):
     "-af", "acompressor=threshold=-24dB:ratio=16:attack=25:release=1000:makeup=20dB",
     "-acodec", "libopus", "-b:a", str(bitrate*1024), "-compression_level", "10", "-f", "opus",
     "-y", "/dev/stdout"]
+
+def spool_stderr(stderr):
+  buf = b''
+  app.logger.debug("Reading from stderr pipe…")
+  while True:
+    read = stderr.read1(BLKSZ)
+    #app.logger.debug("Read %dbytes from stderr: %r", len(read), read)
+    if not read:
+      app.logger.debug("stderr EOF")
+      break
+
+    buf += read
+
+    chunks = [chunk for line in buf.split(b'\n') for chunk in line.split(b'\r')]
+    for line in chunks[:-1]:
+      if line:
+        app.logger.debug("stderr: %s", line.decode('utf8'))
+    buf = chunks[-1]
 
 if __name__ == '__main__':
   from waitress import serve
