@@ -265,7 +265,9 @@ def transcode_do(uri, ua=None):
     storename = pathfor(uri, '.opus', MEDIA_DIR)
     orig = pathfor(uri, '.orig', MEDIA_DIR)
 
-    if not os.path.isfile(orig):
+    if os.path.isfile(orig):
+       app.logger.debug("Using existing: %r", orig)
+    else:
       app.logger.debug("Fetch: " + uri)
       blob = requests.get(uri, stream=True, headers={'user-agent': ua})
       app.logger.debug("Headers:%r", blob.headers)
@@ -329,6 +331,7 @@ def transcode_do(uri, ua=None):
           if os.path.isfile(outf.name):
             os.unlink(outf.name)
     else:
+      app.logger.debug("Already have transcoded: %r", orig)
       for chunk in file_reader(storename):
         yield chunk
 
