@@ -9,7 +9,7 @@ from time import mktime
 import time
 from datetime import datetime
 import pytz
-import requests
+import requests, urllib3
 import tempfile
 import os, sys
 import subprocess
@@ -42,6 +42,7 @@ dictConfig({
 app = Flask(__name__)
 
 pool = futures.ThreadPoolExecutor(max_workers=4)
+http_pool = urllib3.PoolManager()
 
 HMAC_KEY = os.environ['MAC_KEY'].encode('utf8')
 FEED_DIR = os.environ.get('FEED_DIR', '/tmp/pod-feed-store/')
@@ -269,7 +270,7 @@ def transcode_do(uri, ua=None):
        app.logger.debug("Using existing: %r", orig)
     else:
       app.logger.debug("Fetch: " + uri)
-      blob = requests.get(uri, stream=True, headers={'user-agent': ua})
+      blob = http_pool.request('GET', uri, preload_content=False, decode_content=True)
       app.logger.debug("Headers:%r", blob.headers)
 
       prev_stamp = 0
@@ -278,7 +279,7 @@ def transcode_do(uri, ua=None):
         clen = float(blob.headers['content-length']) if 'content-length' in blob.headers else None
         sofar = 0
         while True:
-          data = blob.raw.read(BLKSZ)
+          data = blob.read(BLKSZ)
           if not data:
             break
           outf.write(data)
