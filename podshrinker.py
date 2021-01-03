@@ -270,7 +270,7 @@ def transcode_do(uri, ua=None):
        app.logger.debug("Using existing: %r", orig)
     else:
       app.logger.debug("Fetch: " + uri)
-      blob = http_pool.request('GET', uri, preload_content=False, decode_content=True)
+      blob = http_pool.request('GET', uri, preload_content=False, decode_content=True, redirect=16, retries=16)
       app.logger.debug("Headers:%r", blob.headers)
 
       prev_stamp = 0
