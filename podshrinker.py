@@ -126,14 +126,16 @@ def feed(uri, verif):
     parsed = cached
 
   def save_to_cache():
-    with tempfile.NamedTemporaryFile(delete=False, dir=FEED_DIR) as f:
-      encoded = jsonpickle.encode(parsed)
-      indented = json.dumps(json.loads(encoded), indent=4, sort_keys=True)
-      f.write(indented)
-      f.flush()
-      os.rename(f.name, cachefile)
-      os.chmod(cachefile, 0o644)
-      app.logger.debug("Saved cache to cachefile:%r", cachefile)
+    try:
+      with tempfile.NamedTemporaryFile(delete=False, dir=FEED_DIR, mode='w') as f:
+        encoded = jsonpickle.encode(parsed)
+        f.write(encoded)
+        f.flush()
+        os.rename(f.name, cachefile)
+        os.chmod(cachefile, 0o644)
+        app.logger.debug("Saved cache to cachefile:%r", cachefile)
+    except Exception:
+      app.logger.exception("Error saving feed cache")
 
   pool.submit(save_to_cache)
 
