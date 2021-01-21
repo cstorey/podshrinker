@@ -133,7 +133,6 @@ def feed(uri, verif):
       os.rename(f.name, cachefile)
       os.chmod(cachefile, 0o644)
       app.logger.debug("Saved cache to cachefile:%r", cachefile)
-      raise Exception("boo")
 
   def done(fut):
     try:
