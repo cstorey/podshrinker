@@ -12,7 +12,7 @@ flask = "~=1.1.2"
 pyblake2 = "~=1.1.2"
 werkzeug = "~=1.0.1"
 feedgen = "~=0.9.0"
-jsonpickle = "~=1.5"
+jsonpickle = "~=2.0"
 pytz = "~=2021.1"
 waitress = "~=1.4.4"
 
