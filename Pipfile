@@ -8,7 +8,7 @@ verify_ssl = true
 [packages]
 requests = "~=2.27.1"
 feedparser = "~=6.0.8"
-flask = "~=2.0.3"
+flask = "~=2.1.1"
 pyblake2 = "~=1.1.2"
 werkzeug = "~=2.1.1"
 feedgen = "~=0.9.0"
