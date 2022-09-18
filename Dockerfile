@@ -1,4 +1,4 @@
-FROM ubuntu:20.04
+FROM docker.io/debian:bullseye-slim
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get -y install eatmydata
 RUN eatmydata apt-get update && \
