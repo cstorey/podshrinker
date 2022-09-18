@@ -9,10 +9,10 @@ ENV LC_ALL=C.UTF-8
 ENV LANG=C.UTF-8
 ENV PIPENV_VENV_IN_PROJECT=y
 ADD Pipfile Pipfile.lock /srv/
-RUN eatmydata pipenv install --deploy
-# RUN eatmydata pipenv check
+RUN eatmydata pipenv install --deploy --system
 ADD podshrinker.py /srv/
 ADD templates /srv/templates
+RUN install -o nobody -g nogroup -d /var/lib/feed-store /var/lib/media-store
 VOLUME ["/var/lib/feed-store", "/var/lib/media-store"]
-# CMD chown -R nobody: /var/lib/feed-store /var/lib/media-store && sudo -E -u nobody env PORT=5000 ./.venv/bin/python podshrinker.py
-CMD chown -R nobody: /var/lib/feed-store /var/lib/media-store && sudo -E -u nobody env PORT=5000 ./.venv/bin/python podshrinker.py
+USER nobody
+CMD PORT=5000 python3 podshrinker.py
