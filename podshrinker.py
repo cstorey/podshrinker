@@ -271,41 +271,9 @@ def transcode_do(uri, ua=None):
     storename = pathfor(uri, '.opus', MEDIA_DIR)
     orig = pathfor(uri, '.orig', MEDIA_DIR)
 
-    if os.path.isfile(orig):
-       app.logger.debug("Using existing: %r", orig)
-    else:
-      app.logger.debug("Fetch: " + uri)
-      blob = http_pool.request('GET', uri, preload_content=False, decode_content=True, redirect=16, retries=16)
-      app.logger.debug("Headers:%r", blob.headers)
-
-      prev_stamp = 0
-
-      with tempfile.NamedTemporaryFile(delete=False, dir=MEDIA_DIR) as outf:
-        clen = float(blob.headers['content-length']) if 'content-length' in blob.headers else None
-        sofar = 0
-        while True:
-          data = blob.read(BLKSZ)
-          if not data:
-            break
-          outf.write(data)
-          sofar += len(data)
-          now = time.time()
-          if sofar == clen or (now - prev_stamp) > 1.0:
-            prev_stamp = now
-            if clen:
-              app.logger.debug("Progress: %r/%r (%f%%)", sofar, clen, 100.0*sofar/clen)
-            else:
-              app.logger.debug("Progress: %r/?", sofar)
-        yield ''
-
-        #shutil.copyfileobj(blob.raw, outf)
-        os.rename(outf.name, orig)
-        os.chmod(orig, 0o644)
-        app.logger.debug("Saved original to %r", orig)
-
     if not os.path.isfile(storename):
       with tempfile.NamedTemporaryFile(delete=False, suffix=".opus", dir=MEDIA_DIR) as outf:
-        cmd = transcode_command(orig)
+        cmd = transcode_command(uri)
         app.logger.debug("Running:%r", cmd)
         proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         _err_logger = threading.Thread(target=spool_stderr, args=(proc,))
