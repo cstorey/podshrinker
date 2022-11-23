@@ -310,7 +310,7 @@ def transcode_do(uri, ua=None):
         yield chunk
 
 def transcode_command(orig, bitrate=48):
-  return ["ffmpeg",  "-i", orig,
+    return ["ffmpeg",  "-headers", "User-Agent: curl", "-i", orig,
     "-stats",
     "-af", "acompressor=threshold=-24dB:ratio=16:attack=25:release=1000:makeup=20dB",
     "-acodec", "libopus", "-b:a", str(bitrate*1024), "-compression_level", "10", "-f", "opus",
