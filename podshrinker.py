@@ -57,12 +57,6 @@ app.wsgi_app = ProxyFix(
     x_port=PROXY_DEPTH,
 )
 
-@app.before_first_request
-def setup_store():
-  for d in (FEED_DIR, MEDIA_DIR):
-    if not os.path.isdir(d):
-      os.makedirs(d)
-
 def verify_uri(uri):
   p = urlparse(uri)
   if p.scheme not in ('http', 'https'):
@@ -337,5 +331,11 @@ def spool_stderr(proc):
 if __name__ == '__main__':
   from waitress import serve
   import os
+
+  with app.app_context():
+    for d in (FEED_DIR, MEDIA_DIR):
+      if not os.path.isdir(d):
+        os.makedirs(d)
+
   port = int(os.environ.get('PORT', 5000))
   serve(app, port=port)
