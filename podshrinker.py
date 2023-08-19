@@ -1,6 +1,6 @@
 from flask import Flask, render_template, request, abort, redirect, url_for, make_response, Response
 from werkzeug.middleware.proxy_fix import ProxyFix
-import hmac, pyblake2
+import hmac, hashlib
 import base64
 from urllib.parse import urljoin, urlparse, quote_plus
 import feedparser
@@ -13,7 +13,7 @@ import requests, urllib3
 import tempfile
 import os, sys
 import subprocess
-import hmac, pyblake2, base64
+import base64
 import shutil
 import logging
 from logging.config import dictConfig
@@ -72,7 +72,7 @@ def index():
 
       uri = unitunes(uri)
 
-      mac = hmac.new(HMAC_KEY, uri.encode('utf8'), digestmod=pyblake2.blake2s).digest()
+      mac = hmac.new(HMAC_KEY, uri.encode('utf8'), digestmod=hashlib.blake2s).digest()
       print(repr((uri, uri.encode('utf8'), mac)))
       rel_url = url_for('feed', uri=base64.urlsafe_b64encode(uri.encode('utf8')), verif=base64.urlsafe_b64encode(mac))
       encoded = urljoin(request.url, rel_url)
@@ -87,7 +87,7 @@ def index():
 def feed(uri, verif):
   uri = base64.urlsafe_b64decode(uri.encode('utf8'))
   verif = base64.urlsafe_b64decode(verif.encode('utf8'))
-  mac = hmac.new(HMAC_KEY, uri, digestmod=pyblake2.blake2s).digest()
+  mac = hmac.new(HMAC_KEY, uri, digestmod=hashlib.blake2s).digest()
   if not hmac.compare_digest(verif, mac):
     abort(403)
 
@@ -203,7 +203,7 @@ def audio_2(verif, uri, fname):
 def audio(uri, verif):
   uri = base64.urlsafe_b64decode(uri.encode('utf8'))
   verif = base64.urlsafe_b64decode(verif.encode('utf8'))
-  mac = hmac.new(HMAC_KEY, uri, digestmod=pyblake2.blake2s).digest()
+  mac = hmac.new(HMAC_KEY, uri, digestmod=hashlib.blake2s).digest()
   if not hmac.compare_digest(verif, mac):
     abort(403)
 
@@ -245,7 +245,7 @@ def unitunes(uri):
   return uri
 
 def transcoded_href(uri):
-    verif = hmac.new(HMAC_KEY, uri.encode('utf8'), digestmod=pyblake2.blake2s).digest()
+    verif = hmac.new(HMAC_KEY, uri.encode('utf8'), digestmod=hashlib.blake2s).digest()
     fname = os.path.basename(uri)
     return url_for('audio_2', uri=base64.urlsafe_b64encode(uri.encode('utf8')), verif=base64.urlsafe_b64encode(verif), fname=fname)
 
@@ -256,7 +256,7 @@ def pathfor(uri, suff, dir):
     storebase = \
         quote_plus(uri) + \
         ';' + \
-        base64.urlsafe_b64encode(pyblake2.blake2s(uri.encode('utf8')).digest()).decode('ascii')
+        base64.urlsafe_b64encode(hashlib.blake2s(uri.encode('utf8')).digest()).decode('ascii')
 
     storebase = storebase[:maxlen-len(suff.encode('utf8'))]
     return os.path.join(dir, storebase + suff)
