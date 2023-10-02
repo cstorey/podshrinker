@@ -9,7 +9,7 @@ verify_ssl = true
 requests = "~=2.31.0"
 feedparser = "~=6.0.10"
 flask = "~=2.3.2"
-werkzeug = "~=2.3.6"
+werkzeug = "~=3.0.0"
 feedgen = "~=0.9.0"
 jsonpickle = "~=3.0"
 pytz = "~=2023.3"
