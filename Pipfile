@@ -12,7 +12,7 @@ flask = "~=2.3.3"
 werkzeug = "~=2.3.6"
 feedgen = "~=1.0.0"
 jsonpickle = "~=3.0"
-pytz = "~=2023.3"
+pytz = "~=2024.1"
 waitress = "~=3.0.0"
 
 [scripts]
