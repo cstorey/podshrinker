@@ -1,7 +1,16 @@
-<form method="GET" action="{{ encode_rss_action }}">
-<label>URI: <input type="text" name="uri"/></label>
-<button type='submit'>Go!</button>
-</form>
-{% if encoded %}
-<p>Encoded feed link is: <a href="{{encoded}}">{{encoded}}</a>
-{% endif %}
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Hello World!</title>
+  </head>
+  <body>
+    <form method="GET" action="{{ encode_rss_action }}">
+      <label>URI: <input type="text" name="uri" /></label>
+      <button type="submit">Go!</button>
+    </form>
+    {% if encoded %}
+    <p>Encoded feed link is: <a href="{{encoded}}">{{encoded}}</a></p>
+    {% endif %}
+  </body>
+</html>
