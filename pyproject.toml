@@ -1,0 +1,22 @@
+[tool.poetry]
+name = "podshrinker"
+version = "0.1.0"
+description = ""
+authors = ["Ceri Storey <git@noncrab.net>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.12.0"
+requests = "^2.31.0"
+feedparser = "^6.0.11"
+flask = "^2.3.3"
+werkzeug = "^2.3.8"
+feedgen = "^1.0.0"
+jsonpickle = "^3.0"
+pytz = "^2024.1"
+waitress = "^3.0.0"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
