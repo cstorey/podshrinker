@@ -6,7 +6,7 @@ authors = ["Ceri Storey <git@noncrab.net>"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = "^3.12.0"
+python = "^3.11.0"
 requests = "^2.31.0"
 feedparser = "^6.0.11"
 flask = "^2.3.3"
