@@ -15,7 +15,7 @@ feedgen = "^1.0.0"
 jsonpickle = "^3.0"
 pytz = "^2024.1"
 # I couldn't figure out how to keep proxy header support working on 3, so here it stays.
-waitress = "^2.1.2"
+waitress = "^3.0.1"
 
 
 [build-system]
